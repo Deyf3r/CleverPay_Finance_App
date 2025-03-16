@@ -42,7 +42,7 @@ Este es el diagrama del flujo de datos y componentes principales del sistema:
 | **Rol**                  | **Integrante**                          |
 |--------------------------|----------------------------------------|
 | **Backend Developer**    | Lewis Manuel Felipe Rodríguez (2021-1590) |
-| **Backend Developer**    | Esmeralda Delgado (2021-2107)         |
+| **Backend Developer**    | Deivi Cristopher Aquino Pérez (2022-2021) |
 | **Frontend Web Developer** | Ronny Yoel Pérez Cuevas (2017-5482)    |
 | **Frontend Mobile Developer** | Vicmairy Adelina Charles Laureano (2022-0261) |
 | **AI Specialist**        | Christopher Tolentino (2020-10703)     |
