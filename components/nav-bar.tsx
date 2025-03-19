@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { WalletIcon, BrainCircuitIcon, Settings } from "lucide-react"
 import { useSettings } from "@/context/settings-context"
