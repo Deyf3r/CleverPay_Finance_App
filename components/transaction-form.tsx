@@ -9,6 +9,7 @@ import { CalendarIcon } from "lucide-react"
 import { format, parseISO } from "date-fns"
 
 import { useFinance } from "@/context/finance-context"
+import { useSettings } from "@/context/settings-context"
 import type { TransactionType, TransactionCategory, AccountType } from "@/types/finance"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -18,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
+import { currencies } from "@/lib/currencies"
 
 interface TransactionFormProps {
   transactionId?: string
@@ -26,6 +28,9 @@ interface TransactionFormProps {
 export default function TransactionForm({ transactionId }: TransactionFormProps) {
   const router = useRouter()
   const { addTransaction, editTransaction, getTransactionById } = useFinance()
+  const { formatCurrency, translate, settings } = useSettings()
+  const currencySymbol = currencies[settings.currency].symbol
+  const currencyCode = settings.currency
 
   const [type, setType] = useState<TransactionType>("expense")
   const [amount, setAmount] = useState<string>("")
@@ -59,8 +64,8 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
 
     if (!description.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a description",
+        title: translate("alert.error"),
+        description: translate("alert.enter_description"),
         variant: "destructive",
       })
       return
@@ -68,8 +73,8 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
 
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       toast({
-        title: "Error",
-        description: "Please enter a valid amount",
+        title: translate("alert.error"),
+        description: translate("alert.enter_amount"),
         variant: "destructive",
       })
       return
@@ -88,14 +93,14 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
     if (isEditing && transactionId) {
       editTransaction(transactionId, transactionData)
       toast({
-        title: "Success",
-        description: "Transaction updated successfully",
+        title: translate("alert.success"),
+        description: translate("alert.transaction_updated"),
       })
     } else {
       addTransaction(transactionData)
       toast({
-        title: "Success",
-        description: "Transaction added successfully",
+        title: translate("alert.success"),
+        description: translate("alert.transaction_added"),
       })
     }
 
@@ -106,7 +111,7 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
     <form className="space-y-6" onSubmit={handleSubmit}>
       <div className="space-y-4">
         <div>
-          <Label htmlFor="transaction-type">Transaction Type</Label>
+          <Label htmlFor="transaction-type">{translate("transaction.type")}</Label>
           <RadioGroup
             id="transaction-type"
             value={type}
@@ -116,23 +121,23 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="expense" id="expense" />
               <Label htmlFor="expense" className="font-normal">
-                Expense
+                {translate("transaction.expense")}
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="income" id="income" />
               <Label htmlFor="income" className="font-normal">
-                Income
+                {translate("transaction.income")}
               </Label>
             </div>
           </RadioGroup>
         </div>
 
         <div>
-          <Label htmlFor="amount">Amount</Label>
+          <Label htmlFor="amount">{translate("transaction.amount")}</Label>
           <div className="relative mt-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">$</span>
+              <span className="text-gray-500 sm:text-sm">{currencySymbol}</span>
             </div>
             <Input
               type="number"
@@ -146,17 +151,17 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
               required
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">USD</span>
+              <span className="text-gray-500 sm:text-sm">{currencyCode}</span>
             </div>
           </div>
         </div>
 
         <div>
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">{translate("transaction.description")}</Label>
           <Input
             type="text"
             id="description"
-            placeholder="e.g. Grocery shopping"
+            placeholder={translate("transaction.description_placeholder")}
             className="mt-1"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -165,31 +170,31 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
         </div>
 
         <div>
-          <Label htmlFor="category">Category</Label>
+          <Label htmlFor="category">{translate("transaction.category")}</Label>
           <Select value={category} onValueChange={(value) => setCategory(value as TransactionCategory)}>
             <SelectTrigger id="category" className="mt-1">
-              <SelectValue placeholder="Select a category" />
+              <SelectValue placeholder={translate("transaction.select_category")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="food">Food & Dining</SelectItem>
-              <SelectItem value="transportation">Transportation</SelectItem>
-              <SelectItem value="housing">Housing</SelectItem>
-              <SelectItem value="utilities">Utilities</SelectItem>
-              <SelectItem value="entertainment">Entertainment</SelectItem>
-              <SelectItem value="health">Health & Fitness</SelectItem>
-              <SelectItem value="shopping">Shopping</SelectItem>
-              <SelectItem value="personal">Personal Care</SelectItem>
-              <SelectItem value="education">Education</SelectItem>
-              <SelectItem value="travel">Travel</SelectItem>
-              <SelectItem value="salary">Salary</SelectItem>
-              <SelectItem value="investment">Investment</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
+              <SelectItem value="food">{translate("category.food")}</SelectItem>
+              <SelectItem value="transportation">{translate("category.transportation")}</SelectItem>
+              <SelectItem value="housing">{translate("category.housing")}</SelectItem>
+              <SelectItem value="utilities">{translate("category.utilities")}</SelectItem>
+              <SelectItem value="entertainment">{translate("category.entertainment")}</SelectItem>
+              <SelectItem value="health">{translate("category.health")}</SelectItem>
+              <SelectItem value="shopping">{translate("category.shopping")}</SelectItem>
+              <SelectItem value="personal">{translate("category.personal")}</SelectItem>
+              <SelectItem value="education">{translate("category.education")}</SelectItem>
+              <SelectItem value="travel">{translate("category.travel")}</SelectItem>
+              <SelectItem value="salary">{translate("category.salary")}</SelectItem>
+              <SelectItem value="investment">{translate("category.investment")}</SelectItem>
+              <SelectItem value="other">{translate("category.other")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div>
-          <Label htmlFor="date">Date</Label>
+          <Label htmlFor="date">{translate("transaction.date")}</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button id="date" variant={"outline"} className="w-full justify-start text-left font-normal mt-1">
@@ -204,26 +209,26 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
         </div>
 
         <div>
-          <Label htmlFor="account">Account</Label>
+          <Label htmlFor="account">{translate("transaction.account")}</Label>
           <Select value={account} onValueChange={(value) => setAccount(value as AccountType)}>
             <SelectTrigger id="account" className="mt-1">
-              <SelectValue placeholder="Select an account" />
+              <SelectValue placeholder={translate("transaction.select_account")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="checking">Checking Account</SelectItem>
-              <SelectItem value="savings">Savings Account</SelectItem>
-              <SelectItem value="credit">Credit Card</SelectItem>
-              <SelectItem value="cash">Cash</SelectItem>
+              <SelectItem value="checking">{translate("account.checking")}</SelectItem>
+              <SelectItem value="savings">{translate("account.savings")}</SelectItem>
+              <SelectItem value="credit">{translate("account.credit")}</SelectItem>
+              <SelectItem value="cash">{translate("account.cash")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div>
-          <Label htmlFor="notes">Notes (Optional)</Label>
+          <Label htmlFor="notes">{translate("transaction.notes")}</Label>
           <Input
             type="text"
             id="notes"
-            placeholder="Additional details about this transaction"
+            placeholder={translate("transaction.notes_placeholder")}
             className="mt-1"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -233,9 +238,9 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
 
       <div className="flex justify-end space-x-4">
         <Button variant="outline" asChild>
-          <Link href="/transactions">Cancel</Link>
+          <Link href="/transactions">{translate("transaction.cancel")}</Link>
         </Button>
-        <Button type="submit">{isEditing ? "Update Transaction" : "Save Transaction"}</Button>
+        <Button type="submit">{isEditing ? translate("transaction.update") : translate("transaction.save")}</Button>
       </div>
     </form>
   )

@@ -1,4 +1,4 @@
-// File: C:\Users\theka\Documents\finance\app\transactions\page.tsx
+// File: D:\Repos\Predicash_Finance_App\app\transactions\page.tsx
 import * as entry from '../../../../app/transactions/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

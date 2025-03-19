@@ -6,6 +6,7 @@ import { ArrowDownIcon, ArrowUpIcon, PlusIcon } from "lucide-react"
 import { format } from "date-fns"
 
 import { useFinance } from "@/context/finance-context"
+import { useSettings } from "@/context/settings-context"
 import NavBar from "@/components/nav-bar"
 import TransactionList from "@/components/transaction-list"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,7 @@ import type { TransactionType } from "@/types/finance"
 
 export default function TransactionsPage() {
   const { getTotalIncome, getTotalExpenses, state } = useFinance()
+  const { formatCurrency, translate } = useSettings()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedMonth, setSelectedMonth] = useState<string | undefined>(undefined)
   const [selectedType, setSelectedType] = useState<TransactionType | undefined>(undefined)
@@ -32,67 +34,61 @@ export default function TransactionsPage() {
   // Calculate total transactions
   const totalTransactions = state.transactions.length
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount)
-  }
-
   return (
     <div className="flex min-h-screen w-full flex-col">
       <NavBar />
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight">Transactions</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{translate("transactions.title")}</h2>
           <div className="flex items-center gap-2">
             <Button asChild>
               <Link href="/add-transaction">
                 <PlusIcon className="mr-2 h-4 w-4" />
-                Add Transaction
+                {translate("transactions.add")}
               </Link>
             </Button>
           </div>
         </div>
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+            <Card className="card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">All Transactions</CardTitle>
+                <CardTitle className="text-sm font-medium">{translate("transactions.all")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatCurrency(getTotalIncome() + getTotalExpenses())}</div>
-                <p className="text-xs text-muted-foreground">{totalTransactions} transactions total</p>
+                <p className="text-xs text-muted-foreground">
+                  {totalTransactions} {translate("transactions.total")}
+                </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Income</CardTitle>
+                <CardTitle className="text-sm font-medium">{translate("transactions.income")}</CardTitle>
                 <ArrowUpIcon className="h-4 w-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-emerald-500">{formatCurrency(getTotalIncome())}</div>
                 <p className="text-xs text-muted-foreground">
-                  {state.transactions.filter((t) => t.type === "income").length} transactions
+                  {state.transactions.filter((t) => t.type === "income").length} {translate("transactions.total")}
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Expenses</CardTitle>
+                <CardTitle className="text-sm font-medium">{translate("transactions.expenses")}</CardTitle>
                 <ArrowDownIcon className="h-4 w-4 text-rose-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-rose-500">{formatCurrency(getTotalExpenses())}</div>
                 <p className="text-xs text-muted-foreground">
-                  {state.transactions.filter((t) => t.type === "expense").length} transactions
+                  {state.transactions.filter((t) => t.type === "expense").length} {translate("transactions.total")}
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Average Transaction</CardTitle>
+                <CardTitle className="text-sm font-medium">{translate("transactions.average")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -100,7 +96,7 @@ export default function TransactionsPage() {
                     totalTransactions > 0 ? (getTotalIncome() + getTotalExpenses()) / totalTransactions : 0,
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">Per transaction</p>
+                <p className="text-xs text-muted-foreground">{translate("transactions.per_transaction")}</p>
               </CardContent>
             </Card>
           </div>
@@ -109,7 +105,7 @@ export default function TransactionsPage() {
               <div className="flex w-full max-w-sm items-center space-x-2">
                 <Input
                   type="text"
-                  placeholder="Search transactions..."
+                  placeholder={translate("transactions.search")}
                   className="w-full"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -121,12 +117,12 @@ export default function TransactionsPage() {
                   onValueChange={(value) => setSelectedType(value === "all" ? undefined : (value as TransactionType))}
                 >
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Transaction Type" />
+                    <SelectValue placeholder={translate("transactions.type")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Transactions</SelectItem>
-                    <SelectItem value="income">Income</SelectItem>
-                    <SelectItem value="expense">Expenses</SelectItem>
+                    <SelectItem value="all">{translate("transactions.all_transactions")}</SelectItem>
+                    <SelectItem value="income">{translate("transactions.income")}</SelectItem>
+                    <SelectItem value="expense">{translate("transactions.expenses")}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select
@@ -134,10 +130,10 @@ export default function TransactionsPage() {
                   onValueChange={(value) => setSelectedMonth(value === "all" ? undefined : value)}
                 >
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Month" />
+                    <SelectValue placeholder={translate("transactions.month")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Months</SelectItem>
+                    <SelectItem value="all">{translate("transactions.all_months")}</SelectItem>
                     {months.map((month) => (
                       <SelectItem key={month} value={month}>
                         {month}
@@ -150,13 +146,13 @@ export default function TransactionsPage() {
             <Tabs defaultValue="all" className="w-full">
               <TabsList>
                 <TabsTrigger value="all" onClick={() => setSelectedType(undefined)}>
-                  All
+                  {translate("transactions.all_transactions")}
                 </TabsTrigger>
                 <TabsTrigger value="income" onClick={() => setSelectedType("income")}>
-                  Income
+                  {translate("transactions.income")}
                 </TabsTrigger>
                 <TabsTrigger value="expenses" onClick={() => setSelectedType("expense")}>
-                  Expenses
+                  {translate("transactions.expenses")}
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="all" className="border rounded-md mt-4">

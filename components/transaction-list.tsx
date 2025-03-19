@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns"
 import { Edit2Icon, Trash2Icon } from "lucide-react"
 
 import { useFinance } from "@/context/finance-context"
+import { useSettings } from "@/context/settings-context"
 import type { TransactionType } from "@/types/finance"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -27,6 +28,7 @@ interface TransactionListProps {
 
 export default function TransactionList({ type, month }: TransactionListProps) {
   const { getFilteredTransactions, deleteTransaction } = useFinance()
+  const { formatCurrency, translate } = useSettings()
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const transactions = getFilteredTransactions(type, month)
@@ -36,23 +38,16 @@ export default function TransactionList({ type, month }: TransactionListProps) {
     setDeleteId(null)
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount)
-  }
-
   const formatDate = (dateString: string) => {
     return format(parseISO(dateString), "MMM d, yyyy")
   }
 
   const getCategoryLabel = (category: string) => {
-    return category.charAt(0).toUpperCase() + category.slice(1)
+    return translate(`category.${category}`)
   }
 
   if (transactions.length === 0) {
-    return <div className="text-center py-8 text-muted-foreground">No transactions found.</div>
+    return <div className="text-center py-8 text-muted-foreground">{translate("transactions.not_found")}</div>
   }
 
   return (
@@ -60,10 +55,10 @@ export default function TransactionList({ type, month }: TransactionListProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Description</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
+            <TableHead>{translate("transaction.description")}</TableHead>
+            <TableHead>{translate("transaction.category")}</TableHead>
+            <TableHead>{translate("transaction.date")}</TableHead>
+            <TableHead className="text-right">{translate("transaction.amount")}</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -74,7 +69,7 @@ export default function TransactionList({ type, month }: TransactionListProps) {
               <TableCell>{getCategoryLabel(transaction.category)}</TableCell>
               <TableCell>{formatDate(transaction.date)}</TableCell>
               <TableCell
-                className={`text-right ${transaction.type === "income" ? "text-emerald-500" : "text-rose-500"}`}
+                className={`text-right ${transaction.type === "income" ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}
               >
                 {transaction.type === "income" ? "+" : "-"}
                 {formatCurrency(transaction.amount)}
@@ -101,18 +96,16 @@ export default function TransactionList({ type, month }: TransactionListProps) {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the transaction.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{translate("alert.confirm")}</AlertDialogTitle>
+            <AlertDialogDescription>{translate("alert.delete_transaction")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{translate("alert.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteId && handleDelete(deleteId)}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 dark:text-white"
             >
-              Delete
+              {translate("alert.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
