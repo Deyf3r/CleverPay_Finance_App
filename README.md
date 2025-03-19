@@ -79,33 +79,38 @@ Este es el diagrama del flujo de datos y componentes principales del sistema:
 
 ---
 
-# Instalación de Dependencias Necesarias
+# 🚀 Instalación de Dependencias Necesarias
 
-Para garantizar la correcta ejecución del código o la aplicación, es necesario instalar las dependencias requeridas. Esto se debe hacer ejecutando el siguiente comando en la consola:
+Para garantizar la correcta ejecución del código o la aplicación, es **imprescindible** instalar las dependencias requeridas. Para ello, ejecuta el siguiente comando en la consola:
 
 ```sh
 npm install next --legacy-peer-deps
 ```
 
-## ¿Por qué es necesario este comando?
+---
 
-Algunas dependencias del proyecto pueden tener conflictos con versiones de paquetes instalados. La opción `--legacy-peer-deps` permite instalar las dependencias sin verificar estrictamente las versiones de las dependencias principales, evitando errores de compatibilidad.
+## 📌 ¿Por qué es necesario este comando?
 
-## Pasos para ejecutar el comando
+🔹 Algunas dependencias del proyecto pueden tener **conflictos de versiones** con otros paquetes instalados.  
+🔹 La opción `--legacy-peer-deps` **evita errores de compatibilidad** al permitir la instalación sin restricciones estrictas en las dependencias principales.  
 
-1. Abre una terminal en la raíz del proyecto.
-2. Asegúrate de que Node.js y npm están instalados:
+---
+
+## 🛠️ Pasos para ejecutar el comando correctamente
+
+1️⃣ **Abre una terminal** en la raíz del proyecto.  
+2️⃣ **Verifica que Node.js y npm están instalados** ejecutando:
    ```sh
-   node -v   # Verifica la versión de Node.js
-   npm -v    # Verifica la versión de npm
+   node -v   # Muestra la versión de Node.js
+   npm -v    # Muestra la versión de npm
    ```
-3. Ejecuta el siguiente comando:
+3️⃣ **Ejecuta el comando de instalación:**
    ```sh
    npm install next --legacy-peer-deps
    ```
-4. Una vez finalizada la instalación, ejecuta el proyecto normalmente con:
+4️⃣ **Una vez finalizada la instalación, inicia el proyecto con:**
    ```sh
    npm run dev
    ```
 
-Con estos pasos, la aplicación debería ejecutarse sin problemas. 🚀
+✅ **¡Listo! Ahora tu aplicación debería ejecutarse sin problemas.** 🚀
