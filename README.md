@@ -78,3 +78,34 @@ Este es el diagrama del flujo de datos y componentes principales del sistema:
 | 🚀 **Entrega Final**      | 1 semana   |
 
 ---
+
+# Instalación de Dependencias Necesarias
+
+Para garantizar la correcta ejecución del código o la aplicación, es necesario instalar las dependencias requeridas. Esto se debe hacer ejecutando el siguiente comando en la consola:
+
+```sh
+npm install next --legacy-peer-deps
+```
+
+## ¿Por qué es necesario este comando?
+
+Algunas dependencias del proyecto pueden tener conflictos con versiones de paquetes instalados. La opción `--legacy-peer-deps` permite instalar las dependencias sin verificar estrictamente las versiones de las dependencias principales, evitando errores de compatibilidad.
+
+## Pasos para ejecutar el comando
+
+1. Abre una terminal en la raíz del proyecto.
+2. Asegúrate de que Node.js y npm están instalados:
+   ```sh
+   node -v   # Verifica la versión de Node.js
+   npm -v    # Verifica la versión de npm
+   ```
+3. Ejecuta el siguiente comando:
+   ```sh
+   npm install next --legacy-peer-deps
+   ```
+4. Una vez finalizada la instalación, ejecuta el proyecto normalmente con:
+   ```sh
+   npm run dev
+   ```
+
+Con estos pasos, la aplicación debería ejecutarse sin problemas. 🚀
