@@ -7,7 +7,7 @@
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
-    --card: 210 40% 98%;
+    --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
@@ -36,33 +36,34 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    /* Cambiamos a un gris oscuro en lugar de negro puro */
+    --background: 220 13% 13%; /* Gris oscuro en lugar de negro */
     --foreground: 210 40% 98%;
 
-    --card: 217.2 32.6% 12%;
+    --card: 220 13% 16%; /* Ligeramente más claro que el fondo */
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 6.9%;
+    --popover: 220 13% 16%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217.2 32.6% 20%; /* Ajustado para mejor contraste */
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217.2 32.6% 20%;
+    --muted-foreground: 215 20.2% 75%; /* Más claro para mejor contraste */
 
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 217.2 32.6% 20%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border: 217.2 32.6% 22%; /* Bordes más visibles */
+    --input: 217.2 32.6% 22%;
+    --ring: 224.3 76.3% 60%;
   }
 }
 
@@ -75,7 +76,51 @@
   }
 }
 
-.card {
-  @apply bg-card text-card-foreground shadow-sm;
+/* Estilos adicionales para mejorar el contraste en modo oscuro */
+.dark .card {
+  @apply bg-card text-card-foreground shadow-md border-border/30;
+}
+
+.dark .bg-muted {
+  @apply bg-opacity-30;
+}
+
+/* Mejora de contraste para las tarjetas en modo oscuro */
+.dark .card-header-highlight {
+  @apply border-b border-border/30;
+}
+
+/* Mejora de contraste para las tablas en modo oscuro */
+.dark .table-header {
+  @apply bg-muted/30;
+}
+
+.dark .table-row-alt {
+  @apply bg-muted/10;
+}
+
+/* Mejora de contraste para los badges en modo oscuro */
+.dark .badge-outline {
+  @apply border-border/50 bg-muted/20;
+}
+
+/* Mejora de contraste para los botones en modo oscuro */
+.dark .button-outline {
+  @apply border-border/50 hover:bg-muted/30 hover:border-border;
+}
+
+/* Estilo Material Design para inputs en modo oscuro */
+.dark .input-material {
+  @apply bg-muted/20 border-border/30 focus:border-primary;
+}
+
+/* Estilo Material Design para elementos elevados */
+.dark .elevated-surface {
+  @apply bg-card shadow-md;
+}
+
+/* Estilo para divisores en modo oscuro */
+.dark .divider {
+  @apply border-border/30;
 }
 

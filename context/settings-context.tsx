@@ -100,6 +100,14 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "dashboard.latest_activities": "Your latest financial activities",
     "dashboard.no_transactions": "No transactions yet.",
     "dashboard.view_all": "View all transactions",
+    "dashboard.this_month": "This month",
+    "dashboard.monthly_average": "Monthly average",
+    "dashboard.income_vs_expenses": "Income vs expenses over time",
+    "dashboard.detailed_view": "Detailed View",
+    "dashboard.current_month_balance": "Current month balance",
+    "dashboard.export_data": "Export Data",
+    "dashboard.total_transactions": "Total transactions",
+    "dashboard.add_new": "Add new",
 
     // Transactions
     "transactions.title": "Transactions",
@@ -116,6 +124,13 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "transactions.all_months": "All Months",
     "transactions.all_transactions": "All Transactions",
     "transactions.not_found": "No transactions found.",
+    "transactions.transaction_list": "Transaction List",
+    "transactions.filter_description": "Filter and manage your transactions",
+    "transactions.showing": "Showing",
+    "transactions.entries": "entries",
+    "transactions.export_csv": "Export CSV",
+    "transactions.largest": "Largest",
+    "transactions.this_period": "This period",
 
     // Transaction Form
     "transaction.details": "Transaction Details",
@@ -137,6 +152,7 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "transaction.cancel": "Cancel",
     "transaction.save": "Save Transaction",
     "transaction.update": "Update Transaction",
+    "transaction.actions": "Actions",
 
     // Categories
     "category.food": "Food & Dining",
@@ -298,6 +314,20 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "accounts.no_expenses_this_month": "No expenses recorded this month.",
     "accounts.balance": "Balance",
     "accounts.no_data": "No data available",
+
+    "export.export_pdf": "Export PDF",
+    "export.export_summary": "Export Financial Summary",
+    "export.select_sections": "Select the sections you want to include in your PDF report",
+    "export.transactions_section": "Transactions",
+    "export.accounts_section": "Accounts",
+    "export.ai_insights_section": "AI Insights",
+    "export.dashboard_section": "Dashboard Overview",
+    "export.generating": "Generating...",
+    "export.download": "Download PDF",
+    "export.success": "Export Successful",
+    "export.file_ready": "Your PDF file is ready to download",
+    "theme.switch_to_light": "Switch to light mode",
+    "theme.switch_to_dark": "Switch to dark mode",
   },
   es: {
     // General
@@ -326,6 +356,14 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "dashboard.latest_activities": "Tus últimas actividades financieras",
     "dashboard.no_transactions": "No hay transacciones aún.",
     "dashboard.view_all": "Ver todas las transacciones",
+    "dashboard.this_month": "Este mes",
+    "dashboard.monthly_average": "Promedio mensual",
+    "dashboard.income_vs_expenses": "Ingresos vs gastos a lo largo del tiempo",
+    "dashboard.detailed_view": "Vista Detallada",
+    "dashboard.current_month_balance": "Balance del mes actual",
+    "dashboard.export_data": "Exportar Datos",
+    "dashboard.total_transactions": "Total de transacciones",
+    "dashboard.add_new": "Añadir nueva",
 
     // Transactions
     "transactions.title": "Transacciones",
@@ -342,6 +380,13 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "transactions.all_months": "Todos los Meses",
     "transactions.all_transactions": "Todas las Transacciones",
     "transactions.not_found": "No se encontraron transacciones.",
+    "transactions.transaction_list": "Lista de Transacciones",
+    "transactions.filter_description": "Filtra y administra tus transacciones",
+    "transactions.showing": "Mostrando",
+    "transactions.entries": "entradas",
+    "transactions.export_csv": "Exportar CSV",
+    "transactions.largest": "Mayor",
+    "transactions.this_period": "Este período",
 
     // Transaction Form
     "transaction.details": "Detalles de la Transacción",
@@ -363,6 +408,7 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "transaction.cancel": "Cancelar",
     "transaction.save": "Guardar Transacción",
     "transaction.update": "Actualizar Transacción",
+    "transaction.actions": "Acciones",
 
     // Categories
     "category.food": "Alimentación",
@@ -524,6 +570,20 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "accounts.no_expenses_this_month": "No se han registrado gastos este mes.",
     "accounts.balance": "Balance",
     "accounts.no_data": "No hay datos disponibles",
+
+    "export.export_pdf": "Exportar PDF",
+    "export.export_summary": "Exportar Resumen Financiero",
+    "export.select_sections": "Selecciona las secciones que deseas incluir en tu informe PDF",
+    "export.transactions_section": "Transacciones",
+    "export.accounts_section": "Cuentas",
+    "export.ai_insights_section": "Análisis de IA",
+    "export.dashboard_section": "Resumen General",
+    "export.generating": "Generando...",
+    "export.download": "Descargar PDF",
+    "export.success": "Exportación Exitosa",
+    "export.file_ready": "Tu archivo PDF está listo para descargar",
+    "theme.switch_to_light": "Cambiar a modo claro",
+    "theme.switch_to_dark": "Cambiar a modo oscuro",
   },
 }
 

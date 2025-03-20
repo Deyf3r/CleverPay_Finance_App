@@ -1,7 +1,10 @@
 {
   "/page": "app/page.js",
-  "/transactions/page": "app/transactions/page.js",
+  "/register/page": "app/register/page.js",
+  "/login/page": "app/login/page.js",
+  "/profile/page": "app/profile/page.js",
   "/ai-insights/page": "app/ai-insights/page.js",
+  "/transactions/page": "app/transactions/page.js",
   "/settings/page": "app/settings/page.js",
   "/accounts/page": "app/accounts/page.js"
 }
