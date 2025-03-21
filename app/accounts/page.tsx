@@ -35,6 +35,7 @@ import {
   RefreshCw,
   BarChart4,
 } from "lucide-react"
+import { DetailedAccountView } from "@/components/detailed-account-view"
 
 export default function AccountsPage() {
   const { state } = useFinance()
@@ -43,6 +44,7 @@ export default function AccountsPage() {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false)
   const [newAccountName, setNewAccountName] = useState("")
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false)
+  const [showDetailedView, setShowDetailedView] = useState(false)
 
   // Función para obtener el icono de la cuenta
   const getAccountIcon = (accountType: string) => {
@@ -107,6 +109,7 @@ export default function AccountsPage() {
     setIsRenameDialogOpen(false)
   }
 
+  // Modificar el return para mostrar la vista detallada o la vista normal
   return (
     <div className="flex min-h-screen w-full flex-col">
       <NavBar />
@@ -136,157 +139,169 @@ export default function AccountsPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Object.entries(state.accounts).map(([accountType, account]) => (
-            <Card
-              key={accountType}
-              className={`card overflow-hidden ${activeAccount === accountType ? "ring-2 ring-primary" : ""}`}
-              onClick={() => setActiveAccount(accountType)}
-            >
-              <div className={`h-2 w-full ${getAccountColor(accountType)}`} />
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div className="flex items-center space-x-2">
-                  <div className={`rounded-full p-1 ${getAccountColor(accountType)} bg-opacity-20 dark:bg-opacity-30`}>
-                    {getAccountIcon(accountType)}
+        {showDetailedView ? (
+          <DetailedAccountView accountType={activeAccount} onBack={() => setShowDetailedView(false)} />
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {Object.entries(state.accounts).map(([accountType, account]) => (
+                <Card
+                  key={accountType}
+                  className={`card overflow-hidden ${activeAccount === accountType ? "ring-2 ring-primary" : ""}`}
+                  onClick={() => setActiveAccount(accountType)}
+                >
+                  <div className={`h-2 w-full ${getAccountColor(accountType)}`} />
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div className="flex items-center space-x-2">
+                      <div
+                        className={`rounded-full p-1 ${getAccountColor(accountType)} bg-opacity-20 dark:bg-opacity-30`}
+                      >
+                        {getAccountIcon(accountType)}
+                      </div>
+                      <CardTitle className="text-sm font-medium">{translate(`account.${accountType}`)}</CardTitle>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{formatCurrency(account.balance)}</div>
+                    <p className="text-xs text-muted-foreground">{account.name}</p>
+                  </CardContent>
+                  <CardFooter className="p-2 pt-0">
+                    <div className="flex w-full justify-between text-xs">
+                      <div className="flex items-center text-emerald-500 dark:text-emerald-400">
+                        <ArrowUpRight className="mr-1 h-3 w-3" />
+                        <span>
+                          {formatCurrency(
+                            state.transactions
+                              .filter((t) => t.account === accountType && t.type === "income")
+                              .reduce((sum, t) => sum + t.amount, 0),
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center text-rose-500 dark:text-rose-400">
+                        <ArrowDownRight className="mr-1 h-3 w-3" />
+                        <span>
+                          {formatCurrency(
+                            state.transactions
+                              .filter((t) => t.account === accountType && t.type === "expense")
+                              .reduce((sum, t) => sum + t.amount, 0),
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card className="card md:col-span-2">
+                <CardHeader>
+                  <CardTitle>{translate("accounts.account_activity")}</CardTitle>
+                  <CardDescription>{translate("accounts.activity_description")}</CardDescription>
+                </CardHeader>
+                <CardContent className="px-2">
+                  <AccountChart accountType={activeAccount} />
+                </CardContent>
+              </Card>
+
+              <Card className="card">
+                <CardHeader>
+                  <CardTitle>{translate("accounts.account_stats")}</CardTitle>
+                  <CardDescription>{translate("accounts.stats_description")}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{translate("accounts.total_income")}</span>
+                      <span className="font-medium text-emerald-500 dark:text-emerald-400">
+                        {formatCurrency(totalIncome)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{translate("accounts.total_expenses")}</span>
+                      <span className="font-medium text-rose-500 dark:text-rose-400">
+                        {formatCurrency(totalExpenses)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{translate("accounts.average_income")}</span>
+                      <span className="font-medium">{formatCurrency(averageIncome)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{translate("accounts.average_expense")}</span>
+                      <span className="font-medium">{formatCurrency(averageExpense)}</span>
+                    </div>
                   </div>
-                  <CardTitle className="text-sm font-medium">{translate(`account.${accountType}`)}</CardTitle>
-                </div>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <Pencil className="h-3 w-3" />
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(account.balance)}</div>
-                <p className="text-xs text-muted-foreground">{account.name}</p>
-              </CardContent>
-              <CardFooter className="p-2 pt-0">
-                <div className="flex w-full justify-between text-xs">
-                  <div className="flex items-center text-emerald-500 dark:text-emerald-400">
-                    <ArrowUpRight className="mr-1 h-3 w-3" />
-                    <span>
-                      {formatCurrency(
-                        state.transactions
-                          .filter((t) => t.account === accountType && t.type === "income")
-                          .reduce((sum, t) => sum + t.amount, 0),
-                      )}
-                    </span>
+
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{translate("accounts.transaction_count")}</span>
+                      <span className="text-sm font-medium">{activeAccountTransactions.length}</span>
+                    </div>
+                    <div className="mt-2 h-2 w-full rounded-full bg-muted">
+                      <div
+                        className="h-2 rounded-full bg-primary"
+                        style={{
+                          width: `${Math.min(100, (incomeTransactions.length / Math.max(1, activeAccountTransactions.length)) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                      <span>
+                        {translate("accounts.income")}: {incomeTransactions.length}
+                      </span>
+                      <span>
+                        {translate("accounts.expenses")}: {expenseTransactions.length}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center text-rose-500 dark:text-rose-400">
-                    <ArrowDownRight className="mr-1 h-3 w-3" />
-                    <span>
-                      {formatCurrency(
-                        state.transactions
-                          .filter((t) => t.account === accountType && t.type === "expense")
-                          .reduce((sum, t) => sum + t.amount, 0),
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    variant="outline"
+                    className="w-full dark:bg-muted/10 dark:border-border/30 dark:hover:bg-muted/20"
+                    onClick={() => setShowDetailedView(true)}
+                  >
+                    <BarChart4 className="mr-2 h-4 w-4" />
+                    {translate("accounts.detailed_analytics")}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="card md:col-span-2">
-            <CardHeader>
-              <CardTitle>{translate("accounts.account_activity")}</CardTitle>
-              <CardDescription>{translate("accounts.activity_description")}</CardDescription>
-            </CardHeader>
-            <CardContent className="px-2">
-              <AccountChart accountType={activeAccount} />
-            </CardContent>
-          </Card>
-
-          <Card className="card">
-            <CardHeader>
-              <CardTitle>{translate("accounts.account_stats")}</CardTitle>
-              <CardDescription>{translate("accounts.stats_description")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">{translate("accounts.total_income")}</span>
-                  <span className="font-medium text-emerald-500 dark:text-emerald-400">
-                    {formatCurrency(totalIncome)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">{translate("accounts.total_expenses")}</span>
-                  <span className="font-medium text-rose-500 dark:text-rose-400">{formatCurrency(totalExpenses)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">{translate("accounts.average_income")}</span>
-                  <span className="font-medium">{formatCurrency(averageIncome)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">{translate("accounts.average_expense")}</span>
-                  <span className="font-medium">{formatCurrency(averageExpense)}</span>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{translate("accounts.transaction_count")}</span>
-                  <span className="text-sm font-medium">{activeAccountTransactions.length}</span>
-                </div>
-                <div className="mt-2 h-2 w-full rounded-full bg-muted">
-                  <div
-                    className="h-2 rounded-full bg-primary"
-                    style={{
-                      width: `${Math.min(100, (incomeTransactions.length / Math.max(1, activeAccountTransactions.length)) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                  <span>
-                    {translate("accounts.income")}: {incomeTransactions.length}
-                  </span>
-                  <span>
-                    {translate("accounts.expenses")}: {expenseTransactions.length}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" asChild>
-                <div className="flex items-center">
-                  <BarChart4 className="mr-2 h-4 w-4" />
-                  {translate("accounts.detailed_analytics")}
-                </div>
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="transactions" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="transactions">{translate("accounts.recent_transactions")}</TabsTrigger>
-            <TabsTrigger value="summary">{translate("accounts.account_summary")}</TabsTrigger>
-          </TabsList>
-          <TabsContent value="transactions" className="space-y-4">
-            <Card className="card">
-              <CardHeader>
-                <CardTitle>{translate("accounts.recent_transactions")}</CardTitle>
-                <CardDescription>{translate("accounts.recent_transactions_description")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AccountTransactions accountType={activeAccount} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="summary" className="space-y-4">
-            <Card className="card">
-              <CardHeader>
-                <CardTitle>{translate("accounts.account_summary")}</CardTitle>
-                <CardDescription>{translate("accounts.summary_description")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AccountSummary accountType={activeAccount} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            <Tabs defaultValue="transactions" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="transactions">{translate("accounts.recent_transactions")}</TabsTrigger>
+                <TabsTrigger value="summary">{translate("accounts.account_summary")}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="transactions" className="space-y-4">
+                <Card className="card">
+                  <CardHeader>
+                    <CardTitle>{translate("accounts.recent_transactions")}</CardTitle>
+                    <CardDescription>{translate("accounts.recent_transactions_description")}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <AccountTransactions accountType={activeAccount} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="summary" className="space-y-4">
+                <Card className="card">
+                  <CardHeader>
+                    <CardTitle>{translate("accounts.account_summary")}</CardTitle>
+                    <CardDescription>{translate("accounts.summary_description")}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <AccountSummary accountType={activeAccount} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
 
         {/* Diálogo para renombrar cuenta */}
         <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>

@@ -1,120 +1,148 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { useFinance } from "@/context/finance-context"
-import { BarChart3Icon } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { useFinance } from "@/context/finance-context"
+import { useSettings } from "@/context/settings-context"
+import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns"
 
-// This is a simplified chart component
-// In a real app, you would use a library like Chart.js, Recharts, or D3.js
 export default function FinanceChart() {
-  const { getMonthlyData } = useFinance()
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const { theme } = useTheme()
-  const isDark = theme === "dark"
+  const { state } = useFinance()
+  const { formatCurrency, translate } = useSettings()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
+  const [chartData, setChartData] = useState<any[]>([])
 
   useEffect(() => {
-    if (!canvasRef.current) return
+    const currentDate = new Date()
+    const data = []
 
-    const ctx = canvasRef.current.getContext("2d")
-    if (!ctx) return
+    // Generar datos para los últimos 6 meses
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = subMonths(currentDate, i)
+      const monthStart = startOfMonth(monthDate)
+      const monthEnd = endOfMonth(monthDate)
+      const monthName = format(monthDate, "MMM")
 
-    const monthlyData = getMonthlyData()
-    if (monthlyData.length === 0) return
+      // Filtrar transacciones para este mes
+      const monthTransactions = state.transactions.filter((t) => {
+        const transactionDate = parseISO(t.date)
+        return transactionDate >= monthStart && transactionDate <= monthEnd
+      })
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
+      // Calcular ingresos y gastos
+      const income = monthTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
 
-    // Set dimensions
-    const width = canvasRef.current.width
-    const height = canvasRef.current.height
-    const padding = 40
-    const chartWidth = width - padding * 2
-    const chartHeight = height - padding * 2
+      const expenses = monthTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
 
-    // Find max value for scaling
-    const maxValue = Math.max(...monthlyData.map((d) => Math.max(d.income, d.expenses)))
-
-    // Colors based on theme
-    const axisColor = isDark ? "#64748b" : "#94a3b8"
-    const textColor = isDark ? "#e2e8f0" : "#1e293b"
-    const gridColor = isDark ? "#334155" : "#e2e8f0"
-    const incomeColor = "#10b981" // Green works well in both themes
-    const expenseColor = isDark ? "#f87171" : "#ef4444" // Lighter red for dark mode
-
-    // Draw axes
-    ctx.beginPath()
-    ctx.moveTo(padding, padding)
-    ctx.lineTo(padding, height - padding)
-    ctx.lineTo(width - padding, height - padding)
-    ctx.strokeStyle = axisColor
-    ctx.stroke()
-
-    // Draw bars
-    const barWidth = chartWidth / (monthlyData.length * 2)
-    const gap = barWidth / 2
-
-    monthlyData.forEach((data, i) => {
-      const x = padding + i * (barWidth * 2 + gap)
-
-      // Income bar
-      const incomeHeight = (data.income / maxValue) * chartHeight
-      ctx.fillStyle = incomeColor
-      ctx.fillRect(x, height - padding - incomeHeight, barWidth, incomeHeight)
-
-      // Expense bar
-      const expenseHeight = (data.expenses / maxValue) * chartHeight
-      ctx.fillStyle = expenseColor
-      ctx.fillRect(x + barWidth + gap, height - padding - expenseHeight, barWidth, expenseHeight)
-
-      // Draw month label
-      ctx.fillStyle = axisColor
-      ctx.font = "10px sans-serif"
-      ctx.textAlign = "center"
-      ctx.fillText(data.month, x + barWidth + gap / 2, height - padding + 15)
-    })
-
-    // Draw legend
-    ctx.fillStyle = incomeColor
-    ctx.fillRect(width - padding - 100, padding, 10, 10)
-    ctx.fillStyle = expenseColor
-    ctx.fillRect(width - padding - 100, padding + 20, 10, 10)
-
-    ctx.fillStyle = axisColor
-    ctx.textAlign = "left"
-    ctx.fillText("Income", width - padding - 85, padding + 8)
-    ctx.fillText("Expenses", width - padding - 85, padding + 28)
-
-    // Draw y-axis labels
-    ctx.textAlign = "right"
-    ctx.fillStyle = axisColor
-
-    // Draw 4 evenly spaced labels
-    for (let i = 0; i <= 4; i++) {
-      const value = (maxValue / 4) * i
-      const y = height - padding - (chartHeight / 4) * i
-
-      ctx.fillText(`$${value.toFixed(0)}`, padding - 5, y + 3)
-
-      // Draw light grid line
-      ctx.beginPath()
-      ctx.moveTo(padding, y)
-      ctx.lineTo(width - padding, y)
-      ctx.strokeStyle = gridColor
-      ctx.stroke()
+      data.push({
+        name: monthName,
+        income,
+        expenses,
+        balance: income - expenses,
+      })
     }
-  }, [getMonthlyData, theme, isDark])
+
+    setChartData(data)
+  }, [state.transactions])
+
+  const formatYAxis = (value: number) => {
+    return formatCurrency(value, { notation: "compact" })
+  }
+
+  // Traducciones para las leyendas
+  const getTranslation = (key: string): string => {
+    const translations: Record<string, string> = {
+      income: translate("dashboard.income") || "Ingresos",
+      expenses: translate("dashboard.expenses") || "Gastos",
+      balance: translate("dashboard.balance") || "Balance",
+    }
+    return translations[key] || key
+  }
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
+          <p className="font-medium text-sm mb-2">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <div key={`item-${index}`} className="flex justify-between items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                <span>{getTranslation(entry.dataKey)}</span>
+              </div>
+              <span className="font-medium">{formatCurrency(entry.value)}</span>
+            </div>
+          ))}
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
-    <div className="h-full w-full relative">
-      {getMonthlyData().length === 0 ? (
-        <div className="h-[300px] w-full bg-muted/20 flex items-center justify-center rounded-md">
-          <BarChart3Icon className="h-16 w-16 text-muted" />
-          <span className="ml-2 text-muted-foreground">No data available</span>
-        </div>
-      ) : (
-        <canvas ref={canvasRef} width={800} height={300} className="w-full h-[300px]" />
-      )}
+    <div className="w-full h-[300px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={chartData}
+          margin={{
+            top: 10,
+            right: 10,
+            left: 10,
+            bottom: 10,
+          }}
+        >
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke={isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"}
+          />
+          <XAxis
+            dataKey="name"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: isDark ? "#a1a1aa" : "#71717a", fontSize: 12 }}
+            dy={10}
+          />
+          <YAxis
+            tickFormatter={formatYAxis}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: isDark ? "#a1a1aa" : "#71717a", fontSize: 12 }}
+            dx={-10}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend verticalAlign="top" height={36} formatter={(value) => getTranslation(value)} />
+          <Line
+            type="monotone"
+            dataKey="income"
+            name={getTranslation("income")}
+            stroke="#10b981"
+            strokeWidth={2}
+            dot={{ r: 4, strokeWidth: 2 }}
+            activeDot={{ r: 6, strokeWidth: 2 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="expenses"
+            name={getTranslation("expenses")}
+            stroke="#f43f5e"
+            strokeWidth={2}
+            dot={{ r: 4, strokeWidth: 2 }}
+            activeDot={{ r: 6, strokeWidth: 2 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="balance"
+            name={getTranslation("balance")}
+            stroke="#3b82f6"
+            strokeWidth={2}
+            dot={{ r: 4, strokeWidth: 2 }}
+            activeDot={{ r: 6, strokeWidth: 2 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   )
 }

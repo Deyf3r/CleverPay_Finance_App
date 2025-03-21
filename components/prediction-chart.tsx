@@ -1,8 +1,20 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { BarChart3Icon } from "lucide-react"
 import { useTheme } from "next-themes"
+import { BarChart3Icon } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  type TooltipProps,
+} from "recharts"
+import { useSettings } from "@/context/settings-context"
+import { Card, CardContent } from "./ui/card"
 
 interface PredictionData {
   month: string
@@ -16,134 +28,99 @@ interface PredictionChartProps {
 }
 
 export default function PredictionChart({ incomeData, expenseData, title }: PredictionChartProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const { theme } = useTheme()
+  const { formatCurrency, translate } = useSettings()
   const isDark = theme === "dark"
 
-  useEffect(() => {
-    if (!canvasRef.current) return
-
-    const ctx = canvasRef.current.getContext("2d")
-    if (!ctx) return
-
-    if (incomeData.length === 0 && expenseData.length === 0) return
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
-
-    // Set dimensions
-    const width = canvasRef.current.width
-    const height = canvasRef.current.height
-    const padding = 40
-    const chartWidth = width - padding * 2
-    const chartHeight = height - padding * 2
-
-    // Combine data for scaling
-    const allData = [...incomeData, ...expenseData]
-
-    // Find max value for scaling
-    const maxValue = Math.max(...allData.map((d) => d.amount)) * 1.1 // Add 10% margin
-
-    // Colors based on theme
-    const axisColor = isDark ? "#64748b" : "#94a3b8"
-    const textColor = isDark ? "#e2e8f0" : "#1e293b"
-    const gridColor = isDark ? "#334155" : "#e2e8f0"
-    const incomeColor = "#10b981" // Green works well in both themes
-    const expenseColor = isDark ? "#f87171" : "#ef4444" // Lighter red for dark mode
-
-    // Draw axes
-    ctx.beginPath()
-    ctx.moveTo(padding, padding)
-    ctx.lineTo(padding, height - padding)
-    ctx.lineTo(width - padding, height - padding)
-    ctx.strokeStyle = axisColor
-    ctx.stroke()
-
-    // Draw title
-    ctx.fillStyle = textColor
-    ctx.font = "14px sans-serif"
-    ctx.textAlign = "center"
-    ctx.fillText(title, width / 2, padding / 2)
-
-    // Get unique months from both datasets
-    const months = Array.from(new Set([...incomeData.map((d) => d.month), ...expenseData.map((d) => d.month)]))
-    months.sort((a, b) => {
-      const dateA = new Date(a)
-      const dateB = new Date(b)
+  // Combinar datos para el gráfico
+  const chartData = Array.from(new Set([...incomeData.map((d) => d.month), ...expenseData.map((d) => d.month)]))
+    .map((month) => {
+      const income = incomeData.find((d) => d.month === month)?.amount || 0
+      const expense = expenseData.find((d) => d.month === month)?.amount || 0
+      return { month, income, expense }
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.month)
+      const dateB = new Date(b.month)
       return dateA.getTime() - dateB.getTime()
     })
 
-    // Draw bars
-    const barWidth = chartWidth / (months.length * 2)
-    const gap = barWidth / 2
+  // Colores basados en el tema
+  const incomeColor = "#10b981" // Verde para ingresos
+  const expenseColor = isDark ? "#f87171" : "#ef4444" // Rojo para gastos
+  const gridColor = isDark ? "#334155" : "#e2e8f0"
+  const textColor = isDark ? "#e2e8f0" : "#1e293b"
 
-    months.forEach((month, i) => {
-      const x = padding + i * (barWidth * 2 + gap)
-
-      // Income bar
-      const incomeItem = incomeData.find((d) => d.month === month)
-      if (incomeItem) {
-        const incomeHeight = (incomeItem.amount / maxValue) * chartHeight
-        ctx.fillStyle = incomeColor
-        ctx.fillRect(x, height - padding - incomeHeight, barWidth, incomeHeight)
-      }
-
-      // Expense bar
-      const expenseItem = expenseData.find((d) => d.month === month)
-      if (expenseItem) {
-        const expenseHeight = (expenseItem.amount / maxValue) * chartHeight
-        ctx.fillStyle = expenseColor
-        ctx.fillRect(x + barWidth + gap, height - padding - expenseHeight, barWidth, expenseHeight)
-      }
-
-      // Draw month label
-      ctx.fillStyle = axisColor
-      ctx.font = "10px sans-serif"
-      ctx.textAlign = "center"
-      ctx.fillText(month, x + barWidth + gap / 2, height - padding + 15)
-    })
-
-    // Draw legend
-    ctx.fillStyle = incomeColor
-    ctx.fillRect(width - padding - 100, padding, 10, 10)
-    ctx.fillStyle = expenseColor
-    ctx.fillRect(width - padding - 100, padding + 20, 10, 10)
-
-    ctx.fillStyle = axisColor
-    ctx.textAlign = "left"
-    ctx.fillText("Income", width - padding - 85, padding + 8)
-    ctx.fillText("Expenses", width - padding - 85, padding + 28)
-
-    // Draw y-axis labels
-    ctx.textAlign = "right"
-    ctx.fillStyle = axisColor
-
-    // Draw 4 evenly spaced labels
-    for (let i = 0; i <= 4; i++) {
-      const value = (maxValue / 4) * i
-      const y = height - padding - (chartHeight / 4) * i
-
-      ctx.fillText(`$${value.toFixed(0)}`, padding - 5, y + 3)
-
-      // Draw light grid line
-      ctx.beginPath()
-      ctx.moveTo(padding, y)
-      ctx.lineTo(width - padding, y)
-      ctx.strokeStyle = gridColor
-      ctx.stroke()
+  // Personalizar el tooltip
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+    if (active && payload && payload.length) {
+      return (
+        <Card className="p-2 border shadow-md dark:bg-card/95 backdrop-blur-sm">
+          <CardContent className="p-2">
+            <p className="font-medium text-sm mb-1">{label}</p>
+            {payload.map((entry, index) => (
+              <div key={index} className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                <span className="font-medium">{entry.name}:</span>
+                <span>{formatCurrency(entry.value as number)}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )
     }
-  }, [incomeData, expenseData, title, theme, isDark])
+    return null
+  }
+
+  if (incomeData.length === 0 && expenseData.length === 0) {
+    return (
+      <div className="h-[300px] w-full bg-muted/20 flex flex-col items-center justify-center rounded-md">
+        <BarChart3Icon className="h-16 w-16 text-muted mb-2" />
+        <span className="text-muted-foreground">{translate("ai.no_prediction_data")}</span>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-full w-full relative">
-      {incomeData.length === 0 && expenseData.length === 0 ? (
-        <div className="h-[300px] w-full bg-muted/20 flex items-center justify-center rounded-md">
-          <BarChart3Icon className="h-16 w-16 text-muted" />
-          <span className="ml-2 text-muted-foreground">No prediction data available</span>
-        </div>
-      ) : (
-        <canvas ref={canvasRef} width={800} height={300} className="w-full h-[300px]" />
-      )}
+    <div className="h-[300px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+          <XAxis
+            dataKey="month"
+            tick={{ fill: textColor }}
+            axisLine={{ stroke: gridColor }}
+            tickLine={{ stroke: gridColor }}
+          />
+          <YAxis
+            tick={{ fill: textColor }}
+            axisLine={{ stroke: gridColor }}
+            tickLine={{ stroke: gridColor }}
+            tickFormatter={(value) => `$${value}`}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend
+            wrapperStyle={{ paddingTop: 10 }}
+            formatter={(value) => <span className="text-sm font-medium">{value}</span>}
+          />
+          <Bar
+            name={translate("ai.predicted_income")}
+            dataKey="income"
+            fill={incomeColor}
+            radius={[4, 4, 0, 0]}
+            animationDuration={1500}
+            animationEasing="ease-in-out"
+          />
+          <Bar
+            name={translate("ai.predicted_expenses")}
+            dataKey="expense"
+            fill={expenseColor}
+            radius={[4, 4, 0, 0]}
+            animationDuration={1500}
+            animationEasing="ease-in-out"
+          />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   )
 }

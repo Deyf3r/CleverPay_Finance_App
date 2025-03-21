@@ -36,33 +36,33 @@
   }
 
   .dark {
-    /* Cambiamos a un gris oscuro en lugar de negro puro */
-    --background: 220 13% 13%; /* Gris oscuro en lugar de negro */
+    /* Mejoramos los colores del modo oscuro para un aspecto más premium */
+    --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    --card: 220 13% 16%; /* Ligeramente más claro que el fondo */
+    --card: 222 47% 13%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 220 13% 16%;
+    --popover: 222 47% 13%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 217.2 32.6% 20%; /* Ajustado para mejor contraste */
+    --secondary: 217.2 32.6% 17%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 20%;
-    --muted-foreground: 215 20.2% 75%; /* Más claro para mejor contraste */
+    --muted: 217.2 32.6% 17%;
+    --muted-foreground: 215 20.2% 75%;
 
-    --accent: 217.2 32.6% 20%;
+    --accent: 217.2 32.6% 17%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 22%; /* Bordes más visibles */
-    --input: 217.2 32.6% 22%;
+    --border: 217.2 32.6% 17%;
+    --input: 217.2 32.6% 17%;
     --ring: 224.3 76.3% 60%;
   }
 }
@@ -73,21 +73,28 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-/* Estilos adicionales para mejorar el contraste en modo oscuro */
+/* Mejoras para el modo oscuro */
+.dark {
+  color-scheme: dark;
+}
+
+/* Mejoras para las tarjetas en modo oscuro */
 .dark .card {
   @apply bg-card text-card-foreground shadow-md border-border/30;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
 }
 
-.dark .bg-muted {
-  @apply bg-opacity-30;
-}
-
-/* Mejora de contraste para las tarjetas en modo oscuro */
-.dark .card-header-highlight {
-  @apply border-b border-border/30;
+/* Efecto de vidrio para elementos elevados en modo oscuro */
+.dark .elevated-surface {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Mejora de contraste para las tablas en modo oscuro */
@@ -114,13 +121,157 @@
   @apply bg-muted/20 border-border/30 focus:border-primary;
 }
 
-/* Estilo Material Design para elementos elevados */
-.dark .elevated-surface {
-  @apply bg-card shadow-md;
-}
-
 /* Estilo para divisores en modo oscuro */
 .dark .divider {
   @apply border-border/30;
+}
+
+/* Animaciones suaves para transiciones */
+.animate-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mejoras para los menús desplegables */
+.dark .dropdown-menu {
+  @apply bg-card/95 backdrop-blur-sm border-border/30;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Animaciones para elementos interactivos */
+.hover-scale {
+  @apply transition-transform duration-200;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Efectos de hover para botones */
+.button-hover-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.button-hover-effect::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.button-hover-effect:hover::after {
+  transform: translateX(0);
+}
+
+/* Animaciones para tarjetas */
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Animación de pulso para elementos destacados */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.pulse-animation {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Efecto de brillo para elementos importantes */
+.glow-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-effect::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* Animación de entrada para elementos */
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-up {
+  animation: slideInUp 0.5s ease forwards;
+}
+
+/* Animación para notificaciones */
+@keyframes bounceIn {
+  0%,
+  20%,
+  40%,
+  60%,
+  80%,
+  100% {
+    transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1.0);
+  }
+  0% {
+    opacity: 0;
+    transform: scale3d(0.3, 0.3, 0.3);
+  }
+  20% {
+    transform: scale3d(1.1, 1.1, 1.1);
+  }
+  40% {
+    transform: scale3d(0.9, 0.9, 0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: scale3d(1.03, 1.03, 1.03);
+  }
+  80% {
+    transform: scale3d(0.97, 0.97, 0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+.bounce-in {
+  animation: bounceIn 0.75s;
 }
 

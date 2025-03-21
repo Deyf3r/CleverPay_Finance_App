@@ -989,3 +989,5 @@ export function generateFinancialInsights(transactions: Transaction[]): {
   }
 }
 
+// Exportar las funciones mejoradas
+

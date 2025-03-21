@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/use-toast"
+import { AddFinancialGoalDialog } from "@/components/add-financial-goal-dialog"
 import {
   Camera,
   User,
@@ -415,10 +416,7 @@ export default function ProfilePage() {
                     <Progress value={(goal.current / goal.target) * 100} className="h-2" />
                   </div>
                 ))}
-                <Button className="w-full dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90">
-                  <Target className="mr-2 h-4 w-4" />
-                  Agregar nuevo objetivo
-                </Button>
+                <AddFinancialGoalDialog />
               </CardContent>
             </Card>
 

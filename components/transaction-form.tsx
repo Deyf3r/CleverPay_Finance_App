@@ -7,10 +7,11 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { CalendarIcon } from "lucide-react"
 import { format, parseISO } from "date-fns"
+import { motion, AnimatePresence } from "framer-motion"
 
 import { useFinance } from "@/context/finance-context"
 import { useSettings } from "@/context/settings-context"
-import type { TransactionType, TransactionCategory, AccountType } from "@/types/finance"
+import type { TransactionType, TransactionCategory, AccountType, Transaction } from "@/types/finance"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
@@ -20,6 +21,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import { currencies } from "@/lib/currencies"
+// Importar el nuevo componente simplificado
+import { TransactionSuccessSimplified } from "@/components/transaction-success-simplified"
 
 interface TransactionFormProps {
   transactionId?: string
@@ -40,6 +43,8 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
   const [account, setAccount] = useState<AccountType>("checking")
   const [notes, setNotes] = useState("")
   const [isEditing, setIsEditing] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null)
 
   useEffect(() => {
     if (transactionId) {
@@ -81,6 +86,7 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
     }
 
     const transactionData = {
+      id: transactionId || crypto.randomUUID(),
       type,
       amount: Number.parseFloat(amount),
       description,
@@ -92,25 +98,54 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
 
     if (isEditing && transactionId) {
       editTransaction(transactionId, transactionData)
-      toast({
-        title: translate("alert.success"),
-        description: translate("alert.transaction_updated"),
-      })
+      setCompletedTransaction(transactionData as Transaction)
     } else {
       addTransaction(transactionData)
-      toast({
-        title: translate("alert.success"),
-        description: translate("alert.transaction_added"),
-      })
+      setCompletedTransaction(transactionData as Transaction)
     }
 
+    setShowSuccess(true)
+  }
+
+  const handleCloseSuccess = () => {
+    setShowSuccess(false)
     router.push("/transactions")
   }
 
+  // Reemplazar el uso del componente TransactionSuccess con TransactionSuccessSimplified
+  if (showSuccess && completedTransaction) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.3 }}
+        >
+          <TransactionSuccessSimplified
+            transaction={completedTransaction}
+            type={completedTransaction.type}
+            onClose={handleCloseSuccess}
+          />
+        </motion.div>
+      </AnimatePresence>
+    )
+  }
+
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <motion.form
+      className="space-y-6"
+      onSubmit={handleSubmit}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="space-y-4">
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+        >
           <Label htmlFor="transaction-type">{translate("transaction.type")}</Label>
           <RadioGroup
             id="transaction-type"
@@ -131,9 +166,13 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
               </Label>
             </div>
           </RadioGroup>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
+        >
           <Label htmlFor="amount">{translate("transaction.amount")}</Label>
           <div className="relative mt-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -154,9 +193,13 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
               <span className="text-gray-500 sm:text-sm">{currencyCode}</span>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3, duration: 0.3 }}
+        >
           <Label htmlFor="description">{translate("transaction.description")}</Label>
           <Input
             type="text"
@@ -167,9 +210,13 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
             onChange={(e) => setDescription(e.target.value)}
             required
           />
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4, duration: 0.3 }}
+        >
           <Label htmlFor="category">{translate("transaction.category")}</Label>
           <Select value={category} onValueChange={(value) => setCategory(value as TransactionCategory)}>
             <SelectTrigger id="category" className="mt-1">
@@ -191,9 +238,13 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
               <SelectItem value="other">{translate("category.other")}</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5, duration: 0.3 }}
+        >
           <Label htmlFor="date">{translate("transaction.date")}</Label>
           <Popover>
             <PopoverTrigger asChild>
@@ -202,13 +253,22 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
                 {format(date, "PPP")}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={date} onSelect={(date) => date && setDate(date)} initialFocus />
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(newDate) => newDate && setDate(newDate)}
+                initialFocus
+              />
             </PopoverContent>
           </Popover>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.6, duration: 0.3 }}
+        >
           <Label htmlFor="account">{translate("transaction.account")}</Label>
           <Select value={account} onValueChange={(value) => setAccount(value as AccountType)}>
             <SelectTrigger id="account" className="mt-1">
@@ -221,9 +281,13 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
               <SelectItem value="cash">{translate("account.cash")}</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.7, duration: 0.3 }}
+        >
           <Label htmlFor="notes">{translate("transaction.notes")}</Label>
           <Input
             type="text"
@@ -233,16 +297,26 @@ export default function TransactionForm({ transactionId }: TransactionFormProps)
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-        </div>
+        </motion.div>
       </div>
 
-      <div className="flex justify-end space-x-4">
+      <motion.div
+        className="flex justify-end space-x-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8, duration: 0.3 }}
+      >
         <Button variant="outline" asChild>
           <Link href="/transactions">{translate("transaction.cancel")}</Link>
         </Button>
-        <Button type="submit">{isEditing ? translate("transaction.update") : translate("transaction.save")}</Button>
-      </div>
-    </form>
+        <Button type="submit" className="relative overflow-hidden group">
+          <span className="relative z-10">
+            {isEditing ? translate("transaction.update") : translate("transaction.save")}
+          </span>
+          <span className="absolute inset-0 bg-primary-foreground/10 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></span>
+        </Button>
+      </motion.div>
+    </motion.form>
   )
 }
 
