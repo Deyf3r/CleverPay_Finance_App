@@ -1,4 +1,4 @@
-import type { Transaction } from "@/types/finance"
+import type { Transaction, TransactionCategory } from "@/types/finance"
 import {
   format,
   addMonths,
@@ -10,21 +10,55 @@ import {
   differenceInDays,
   getMonth,
   getYear,
-  getDate,
+  isBefore,
+  addDays,
+  compareAsc,
 } from "date-fns"
 
-// Función mejorada para predecir gastos futuros con análisis avanzado
-export function predictExpenses(
-  transactions: Transaction[],
-  months = 3,
-): {
+// Tipos avanzados para las predicciones
+export interface ExpensePrediction {
   month: string
   amount: number
   categories: Record<string, number>
   confidence: number
-}[] {
+  trend: "increasing" | "decreasing" | "stable"
+  volatility: number
+  seasonalFactors: Record<string, number>
+  recurringExpenses: RecurringExpense[]
+  anomalyRisk: number
+}
+
+export interface IncomePrediction {
+  month: string
+  amount: number
+  sources: Record<string, number>
+  confidence: number
+  trend: "increasing" | "decreasing" | "stable"
+  volatility: number
+  seasonalFactors: Record<string, number>
+  recurringIncome: RecurringIncome[]
+}
+
+interface RecurringExpense {
+  description: string
+  category: TransactionCategory
+  amount: number
+  date: string
+  confidence: number
+}
+
+interface RecurringIncome {
+  description: string
+  category: TransactionCategory
+  amount: number
+  date: string
+  confidence: number
+}
+
+// Función mejorada para predecir gastos futuros con análisis avanzado
+export function predictExpenses(transactions: Transaction[], months = 3): ExpensePrediction[] {
   const currentDate = new Date()
-  const predictions = []
+  const predictions: ExpensePrediction[] = []
 
   // Obtener datos de los últimos 24 meses para un análisis más completo
   const twoYearsAgo = subMonths(currentDate, 24)
@@ -39,6 +73,7 @@ export function predictExpenses(
   const monthKeys: string[] = []
   const expenseValues: number[] = []
   const monthNumbers: number[] = [] // Para análisis de estacionalidad
+  const dateObjects: Date[] = [] // Para análisis cronológico
 
   // Recopilar datos históricos
   transactions
@@ -56,6 +91,7 @@ export function predictExpenses(
         monthlyTransactionCounts[monthKey] = 0
         monthKeys.push(monthKey)
         monthNumbers.push(monthNumber)
+        dateObjects.push(startOfMonth(date))
       }
 
       monthlyExpenses[monthKey] += transaction.amount
@@ -76,13 +112,14 @@ export function predictExpenses(
     })
 
   // Ordenar meses cronológicamente
-  monthKeys.sort((a, b) => {
-    return new Date(a).getTime() - new Date(b).getTime()
-  })
+  const sortedMonthIndices = dateObjects
+    .map((date, index) => ({ date, index }))
+    .sort((a, b) => compareAsc(a.date, b.date))
+    .map((item) => item.index)
 
   // Extraer valores de gastos en orden cronológico
-  monthKeys.forEach((key) => {
-    expenseValues.push(monthlyExpenses[key])
+  sortedMonthIndices.forEach((index) => {
+    expenseValues.push(monthlyExpenses[monthKeys[index]])
   })
 
   // Análisis de tendencia usando regresión lineal avanzada
@@ -112,8 +149,8 @@ export function predictExpenses(
     // Calcular factores estacionales (por mes del año)
     const monthFactors: Record<number, { sum: number; count: number }> = {}
 
-    monthKeys.forEach((monthKey, i) => {
-      const date = new Date(monthKey)
+    sortedMonthIndices.forEach((index, i) => {
+      const date = dateObjects[index]
       const month = getMonth(date)
       if (!monthFactors[month]) {
         monthFactors[month] = { sum: 0, count: 0 }
@@ -143,7 +180,7 @@ export function predictExpenses(
   }
 
   // Calcular el promedio de gastos mensuales recientes (últimos 3 meses)
-  const recentMonths = monthKeys.slice(-3)
+  const recentMonths = sortedMonthIndices.slice(-3).map((index) => monthKeys[index])
   const avgRecentMonthlyExpense =
     recentMonths.length > 0 ? recentMonths.reduce((sum, key) => sum + monthlyExpenses[key], 0) / recentMonths.length : 0
 
@@ -162,65 +199,103 @@ export function predictExpenses(
   const recurringExpenses: Record<
     string,
     {
+      description: string
       amount: number
-      category: string
+      category: TransactionCategory
       frequency: number
       lastDate: Date
       nextDates: Date[]
+      confidence: number
     }
   > = {}
 
-  // Identificar gastos recurrentes
-  transactions
-    .filter((t) => t.type === "expense" && isAfter(parseISO(t.date), subMonths(currentDate, 6)))
+  // Identificar gastos recurrentes con análisis avanzado
+  const expenseTransactions = transactions
+    .filter((t) => t.type === "expense" && isAfter(parseISO(t.date), subMonths(currentDate, 12)))
     .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
-    .forEach((transaction) => {
-      // Buscar transacciones similares (misma descripción, categoría y monto similar)
-      const key = `${transaction.description}-${transaction.category}`
-      const date = parseISO(transaction.date)
 
-      if (!recurringExpenses[key]) {
-        recurringExpenses[key] = {
-          amount: transaction.amount,
-          category: transaction.category,
-          frequency: 0,
-          lastDate: date,
-          nextDates: [],
-        }
-      } else {
-        // Calcular la frecuencia como la diferencia en días
-        const daysDiff = differenceInDays(date, recurringExpenses[key].lastDate)
+  // Agrupar transacciones similares
+  const transactionGroups: Record<string, Transaction[]> = {}
 
-        // Si la diferencia es entre 25 y 35 días, probablemente es mensual
-        if (daysDiff >= 25 && daysDiff <= 35) {
-          recurringExpenses[key].frequency = 30 // Mensual
-        }
-        // Si la diferencia es entre 6 y 8 días, probablemente es semanal
-        else if (daysDiff >= 6 && daysDiff <= 8) {
-          recurringExpenses[key].frequency = 7 // Semanal
-        }
-        // Si la diferencia es entre 13 y 15 días, probablemente es quincenal
-        else if (daysDiff >= 13 && daysDiff <= 15) {
-          recurringExpenses[key].frequency = 14 // Quincenal
-        }
-        // Si la diferencia es entre 85 y 95 días, probablemente es trimestral
-        else if (daysDiff >= 85 && daysDiff <= 95) {
-          recurringExpenses[key].frequency = 90 // Trimestral
-        }
+  expenseTransactions.forEach((transaction) => {
+    // Crear una clave basada en descripción y categoría
+    const key = `${transaction.description.toLowerCase().trim()}-${transaction.category}`
 
-        recurringExpenses[key].lastDate = date
-        recurringExpenses[key].amount = recurringExpenses[key].amount * 0.7 + transaction.amount * 0.3 // Actualizar monto promedio
+    if (!transactionGroups[key]) {
+      transactionGroups[key] = []
+    }
+
+    transactionGroups[key].push(transaction)
+  })
+
+  // Analizar cada grupo para detectar patrones recurrentes
+  Object.entries(transactionGroups).forEach(([key, transactions]) => {
+    if (transactions.length < 2) return // Necesitamos al menos 2 transacciones para detectar un patrón
+
+    const dates = transactions.map((t) => parseISO(t.date)).sort(compareAsc)
+    const amounts = transactions.map((t) => t.amount)
+    const avgAmount = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length
+
+    // Calcular intervalos entre fechas
+    const intervals: number[] = []
+    for (let i = 1; i < dates.length; i++) {
+      intervals.push(differenceInDays(dates[i], dates[i - 1]))
+    }
+
+    // Calcular el intervalo promedio y la desviación estándar
+    const avgInterval = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length
+    const stdDevInterval = calculateStdDev(intervals)
+
+    // Determinar si es un patrón recurrente basado en la consistencia de los intervalos
+    const isRecurring = stdDevInterval / avgInterval < 0.3 // Menos del 30% de variación
+
+    if (isRecurring) {
+      let frequency = Math.round(avgInterval)
+      let confidenceScore = 0.7
+
+      // Ajustar confianza basada en la consistencia y número de ocurrencias
+      confidenceScore += (1 - stdDevInterval / avgInterval) * 0.2 // Más consistente = mayor confianza
+      confidenceScore += Math.min((transactions.length - 2) * 0.05, 0.2) // Más ocurrencias = mayor confianza
+
+      // Limitar confianza a 0.95
+      confidenceScore = Math.min(confidenceScore, 0.95)
+
+      // Detectar patrones comunes para mejorar la predicción
+      if (Math.abs(frequency - 30) <= 3) {
+        frequency = 30 // Mensual
+        confidenceScore += 0.05
+      } else if (Math.abs(frequency - 14) <= 2) {
+        frequency = 14 // Quincenal
+        confidenceScore += 0.05
+      } else if (Math.abs(frequency - 7) <= 1) {
+        frequency = 7 // Semanal
+        confidenceScore += 0.05
+      } else if (Math.abs(frequency - 90) <= 5) {
+        frequency = 90 // Trimestral
+        confidenceScore += 0.05
+      } else if (Math.abs(frequency - 365) <= 10) {
+        frequency = 365 // Anual
+        confidenceScore += 0.05
       }
-    })
 
-  // Calcular próximas fechas para gastos recurrentes
-  Object.values(recurringExpenses).forEach((expense) => {
-    if (expense.frequency > 0) {
-      // Calcular las próximas 3 fechas
-      for (let i = 1; i <= 3; i++) {
-        const nextDate = new Date(expense.lastDate)
-        nextDate.setDate(nextDate.getDate() + expense.frequency * i)
-        expense.nextDates.push(nextDate)
+      // Registrar el gasto recurrente
+      recurringExpenses[key] = {
+        description: transactions[0].description,
+        amount: avgAmount,
+        category: transactions[0].category,
+        frequency,
+        lastDate: dates[dates.length - 1],
+        nextDates: [],
+        confidence: confidenceScore,
+      }
+
+      // Calcular próximas fechas
+      const lastDate = dates[dates.length - 1]
+      for (let i = 1; i <= 6; i++) {
+        const nextDate = addDays(lastDate, frequency * i)
+        if (isAfter(nextDate, currentDate) && isBefore(nextDate, addMonths(currentDate, months))) {
+          recurringExpenses[key].nextDates.push(nextDate)
+        }
       }
     }
   })
@@ -231,6 +306,7 @@ export function predictExpenses(
     const monthKey = format(futureMonth, "MMM yyyy")
     const monthNumber = getMonth(futureMonth)
     const year = getYear(futureMonth)
+    const monthName = format(futureMonth, "MMMM")
 
     // Base de predicción: promedio reciente + tendencia
     let predictedAmount = avgRecentMonthlyExpense + slope * (expenseValues.length + i - 1)
@@ -241,26 +317,28 @@ export function predictExpenses(
     }
 
     // Aplicar factor estacional si está disponible
-    if (seasonalFactors[monthNumber]) {
-      predictedAmount *= seasonalFactors[monthNumber]
-    } else {
-      // Ajustes estacionales genéricos si no hay datos históricos suficientes
-      const month = monthNumber + 1 // 1-12 para legibilidad
+    const seasonalFactor = seasonalFactors[monthNumber] || 1
+    predictedAmount *= seasonalFactor
 
-      if (month === 12) {
-        // Diciembre
-        predictedAmount *= 1.25 // 25% más de gastos en diciembre (navidad)
-      } else if (month === 1) {
-        // Enero
-        predictedAmount *= 0.85 // 15% menos de gastos en enero (post-navidad)
-      } else if ([6, 7, 8].includes(month)) {
-        // Verano
-        predictedAmount *= 1.1 // 10% más en verano
-      } else if ([4, 9].includes(month)) {
-        // Abril, Septiembre (cambios de temporada)
-        predictedAmount *= 1.05 // 5% más
-      }
+    // Ajustes estacionales adicionales basados en patrones comunes
+    const month = monthNumber + 1 // 1-12 para legibilidad
+    let seasonalAdjustment = 1
+
+    if (month === 12) {
+      // Diciembre (navidad)
+      seasonalAdjustment *= 1.15
+    } else if (month === 1) {
+      // Enero (post-navidad)
+      seasonalAdjustment *= 0.9
+    } else if ([6, 7, 8].includes(month)) {
+      // Verano
+      seasonalAdjustment *= 1.05
+    } else if ([4, 9].includes(month)) {
+      // Abril, Septiembre (cambios de temporada)
+      seasonalAdjustment *= 1.03
     }
+
+    predictedAmount *= seasonalAdjustment
 
     // Análisis de categorías para predicciones más precisas
     const predictedCategories: Record<string, number> = {}
@@ -294,6 +372,8 @@ export function predictExpenses(
     }
 
     // Añadir gastos recurrentes específicos
+    const monthRecurringExpenses: RecurringExpense[] = []
+
     Object.values(recurringExpenses).forEach((expense) => {
       if (expense.frequency > 0) {
         // Verificar si alguna fecha cae en este mes
@@ -306,9 +386,18 @@ export function predictExpenses(
           }
 
           // Añadir el gasto por cada ocurrencia
-          monthDates.forEach(() => {
+          monthDates.forEach((date) => {
             predictedCategories[expense.category] += expense.amount
             predictedAmount += expense.amount
+
+            // Registrar para el análisis detallado
+            monthRecurringExpenses.push({
+              description: expense.description,
+              category: expense.category,
+              amount: expense.amount,
+              date: date.toISOString(),
+              confidence: expense.confidence,
+            })
           })
         }
       }
@@ -332,11 +421,33 @@ export function predictExpenses(
     // Limitar la confianza entre 0.4 y 0.95
     confidence = Math.max(0.4, Math.min(0.95, confidence))
 
+    // Determinar tendencia
+    let trend: "increasing" | "decreasing" | "stable" = "stable"
+    if (slope > 0 && slope / (avgRecentMonthlyExpense || 1) > 0.05) {
+      trend = "increasing"
+    } else if (slope < 0 && Math.abs(slope) / (avgRecentMonthlyExpense || 1) > 0.05) {
+      trend = "decreasing"
+    }
+
+    // Calcular riesgo de anomalías
+    const anomalyRisk = volatilityFactor * 0.5 + (1 - confidence) * 0.5
+
+    // Crear factores estacionales para la interfaz
+    const seasonalFactorsForUI: Record<string, number> = {}
+    Object.entries(seasonalFactors).forEach(([month, factor]) => {
+      seasonalFactorsForUI[format(new Date(2023, Number.parseInt(month), 1), "MMMM")] = factor
+    })
+
     predictions.push({
       month: monthKey,
       amount: Math.max(0, predictedAmount),
       categories: predictedCategories,
       confidence,
+      trend,
+      volatility: volatilityFactor,
+      seasonalFactors: seasonalFactorsForUI,
+      recurringExpenses: monthRecurringExpenses,
+      anomalyRisk,
     })
   }
 
@@ -344,17 +455,9 @@ export function predictExpenses(
 }
 
 // Función mejorada para predecir ingresos futuros con análisis avanzado
-export function predictIncome(
-  transactions: Transaction[],
-  months = 3,
-): {
-  month: string
-  amount: number
-  sources: Record<string, number>
-  confidence: number
-}[] {
+export function predictIncome(transactions: Transaction[], months = 3): IncomePrediction[] {
   const currentDate = new Date()
-  const predictions = []
+  const predictions: IncomePrediction[] = []
 
   // Obtener datos de los últimos 24 meses
   const twoYearsAgo = subMonths(currentDate, 24)
@@ -363,6 +466,7 @@ export function predictIncome(
   const monthlyIncome: Record<string, number> = {}
   const monthlyIncomeBySource: Record<string, Record<string, number>> = {}
   const monthlyTransactionCounts: Record<string, number> = {}
+  const dateObjects: Date[] = []
 
   // Inicializar arrays para análisis de tendencias
   const monthKeys: string[] = []
@@ -385,6 +489,7 @@ export function predictIncome(
         monthlyTransactionCounts[monthKey] = 0
         monthKeys.push(monthKey)
         monthNumbers.push(monthNumber)
+        dateObjects.push(startOfMonth(date))
       }
 
       monthlyIncome[monthKey] += transaction.amount
@@ -398,24 +503,27 @@ export function predictIncome(
     })
 
   // Ordenar meses cronológicamente
-  monthKeys.sort((a, b) => {
-    return new Date(a).getTime() - new Date(b).getTime()
-  })
+  const sortedMonthIndices = dateObjects
+    .map((date, index) => ({ date, index }))
+    .sort((a, b) => compareAsc(a.date, b.date))
+    .map((item) => item.index)
 
   // Extraer valores de ingresos en orden cronológico
-  monthKeys.forEach((key) => {
-    incomeValues.push(monthlyIncome[key])
+  sortedMonthIndices.forEach((index) => {
+    incomeValues.push(monthlyIncome[monthKeys[index]])
   })
 
   // Detectar patrones de ingresos recurrentes
   const recurringIncome: Record<
     string,
     {
+      description: string
       amount: number
-      category: string
+      category: TransactionCategory
       frequency: number
       lastDate: Date
       nextDates: Date[]
+      confidence: number
     }
   > = {}
 
@@ -446,8 +554,8 @@ export function predictIncome(
     // Calcular factores estacionales (por mes del año)
     const monthFactors: Record<number, { sum: number; count: number }> = {}
 
-    monthKeys.forEach((monthKey, i) => {
-      const date = new Date(monthKey)
+    sortedMonthIndices.forEach((index, i) => {
+      const date = dateObjects[index]
       const month = getMonth(date)
       if (!monthFactors[month]) {
         monthFactors[month] = { sum: 0, count: 0 }
@@ -476,68 +584,101 @@ export function predictIncome(
     confidenceBase = 0.65
   }
 
-  // Analizar transacciones para identificar ingresos recurrentes
-  transactions
+  // Identificar ingresos recurrentes con análisis avanzado
+  const incomeTransactions = transactions
     .filter((t) => t.type === "income" && isAfter(parseISO(t.date), subMonths(currentDate, 12)))
     .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
-    .forEach((transaction) => {
-      const key = `${transaction.description}-${transaction.category}`
-      const date = parseISO(transaction.date)
 
-      if (!recurringIncome[key]) {
-        recurringIncome[key] = {
-          amount: transaction.amount,
-          category: transaction.category,
-          frequency: 0,
-          lastDate: date,
-          nextDates: [],
-        }
-      } else {
-        // Calcular la frecuencia como la diferencia en días
-        const daysDiff = differenceInDays(date, recurringIncome[key].lastDate)
+  // Agrupar transacciones similares
+  const transactionGroups: Record<string, Transaction[]> = {}
 
-        // Si la diferencia es entre 25 y 35 días, probablemente es mensual (salario)
-        if (daysDiff >= 25 && daysDiff <= 35) {
-          recurringIncome[key].frequency = 30 // Mensual
-        }
-        // Si la diferencia es entre 13 y 16 días, probablemente es quincenal
-        else if (daysDiff >= 13 && daysDiff <= 16) {
-          recurringIncome[key].frequency = 15 // Quincenal
-        }
-        // Si la diferencia es entre 6 y 8 días, probablemente es semanal
-        else if (daysDiff >= 6 && daysDiff <= 8) {
-          recurringIncome[key].frequency = 7 // Semanal
-        }
-        // Si la diferencia es entre 85 y 95 días, probablemente es trimestral
-        else if (daysDiff >= 85 && daysDiff <= 95) {
-          recurringIncome[key].frequency = 90 // Trimestral
-        }
-        // Si la diferencia es entre 175 y 190 días, probablemente es semestral
-        else if (daysDiff >= 175 && daysDiff <= 190) {
-          recurringIncome[key].frequency = 180 // Semestral
-        }
+  incomeTransactions.forEach((transaction) => {
+    // Crear una clave basada en descripción y categoría
+    const key = `${transaction.description.toLowerCase().trim()}-${transaction.category}`
 
-        recurringIncome[key].lastDate = date
+    if (!transactionGroups[key]) {
+      transactionGroups[key] = []
+    }
 
-        // Actualizar monto con un promedio ponderado, dando más peso a las transacciones recientes
-        recurringIncome[key].amount = recurringIncome[key].amount * 0.7 + transaction.amount * 0.3
+    transactionGroups[key].push(transaction)
+  })
+
+  // Analizar cada grupo para detectar patrones recurrentes
+  Object.entries(transactionGroups).forEach(([key, transactions]) => {
+    if (transactions.length < 2) return // Necesitamos al menos 2 transacciones para detectar un patrón
+
+    const dates = transactions.map((t) => parseISO(t.date)).sort(compareAsc)
+    const amounts = transactions.map((t) => t.amount)
+    const avgAmount = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length
+
+    // Calcular intervalos entre fechas
+    const intervals: number[] = []
+    for (let i = 1; i < dates.length; i++) {
+      intervals.push(differenceInDays(dates[i], dates[i - 1]))
+    }
+
+    // Calcular el intervalo promedio y la desviación estándar
+    const avgInterval = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length
+    const stdDevInterval = Math.sqrt(
+      intervals.reduce((sum, interval) => sum + Math.pow(interval - avgInterval, 2), 0) / intervals.length,
+    )
+
+    // Determinar si es un patrón recurrente basado en la consistencia de los intervalos
+    const isRecurring = stdDevInterval / avgInterval < 0.3 // Menos del 30% de variación
+
+    if (isRecurring) {
+      let frequency = Math.round(avgInterval)
+      let confidenceScore = 0.7
+
+      // Ajustar confianza basada en la consistencia y número de ocurrencias
+      confidenceScore += (1 - stdDevInterval / avgInterval) * 0.2 // Más consistente = mayor confianza
+      confidenceScore += Math.min((transactions.length - 2) * 0.05, 0.2) // Más ocurrencias = mayor confianza
+
+      // Limitar confianza a 0.95
+      confidenceScore = Math.min(confidenceScore, 0.95)
+
+      // Detectar patrones comunes para mejorar la predicción
+      if (Math.abs(frequency - 30) <= 3) {
+        frequency = 30 // Mensual
+        confidenceScore += 0.05
+      } else if (Math.abs(frequency - 14) <= 2) {
+        frequency = 14 // Quincenal
+        confidenceScore += 0.05
+      } else if (Math.abs(frequency - 7) <= 1) {
+        frequency = 7 // Semanal
+        confidenceScore += 0.05
+      } else if (Math.abs(frequency - 90) <= 5) {
+        frequency = 90 // Trimestral
+        confidenceScore += 0.05
+      } else if (Math.abs(frequency - 365) <= 10) {
+        frequency = 365 // Anual
+        confidenceScore += 0.05
       }
-    })
 
-  // Calcular próximas fechas para ingresos recurrentes
-  Object.values(recurringIncome).forEach((income) => {
-    if (income.frequency > 0) {
-      // Calcular las próximas 3 fechas
-      for (let i = 1; i <= 3; i++) {
-        const nextDate = new Date(income.lastDate)
-        nextDate.setDate(nextDate.getDate() + income.frequency * i)
-        income.nextDates.push(nextDate)
+      // Registrar el ingreso recurrente
+      recurringIncome[key] = {
+        description: transactions[0].description,
+        amount: avgAmount,
+        category: transactions[0].category,
+        frequency,
+        lastDate: dates[dates.length - 1],
+        nextDates: [],
+        confidence: confidenceScore,
+      }
+
+      // Calcular próximas fechas
+      const lastDate = dates[dates.length - 1]
+      for (let i = 1; i <= 6; i++) {
+        const nextDate = addDays(lastDate, frequency * i)
+        if (isAfter(nextDate, currentDate) && isBefore(nextDate, addMonths(currentDate, months))) {
+          recurringIncome[key].nextDates.push(nextDate)
+        }
       }
     }
   })
 
   // Calcular el promedio de ingresos mensuales recientes (últimos 3 meses)
-  const recentMonths = monthKeys.slice(-3)
+  const recentMonths = sortedMonthIndices.slice(-3).map((index) => monthKeys[index])
   const avgRecentMonthlyIncome =
     recentMonths.length > 0 ? recentMonths.reduce((sum, key) => sum + monthlyIncome[key], 0) / recentMonths.length : 0
 
@@ -558,7 +699,7 @@ export function predictIncome(
     const monthKey = format(futureMonth, "MMM yyyy")
     const monthNumber = getMonth(futureMonth)
     const year = getYear(futureMonth)
-    const dayOfMonth = getDate(futureMonth)
+    const monthName = format(futureMonth, "MMMM")
 
     // Base de predicción: promedio reciente + tendencia
     let predictedAmount = avgRecentMonthlyIncome + slope * i
@@ -569,23 +710,25 @@ export function predictIncome(
     }
 
     // Aplicar factor estacional si está disponible
-    if (seasonalFactors[monthNumber]) {
-      predictedAmount *= seasonalFactors[monthNumber]
-    } else {
-      // Ajustes estacionales genéricos si no hay datos históricos suficientes
-      const month = monthNumber + 1 // 1-12 para legibilidad
+    const seasonalFactor = seasonalFactors[monthNumber] || 1
+    predictedAmount *= seasonalFactor
 
-      if (month === 12) {
-        // Diciembre
-        predictedAmount *= 1.1 // 10% más de ingresos en diciembre (bonos)
-      } else if (month === 1) {
-        // Enero
-        predictedAmount *= 0.95 // 5% menos de ingresos en enero
-      } else if ([6, 7].includes(month)) {
-        // Junio, Julio (vacaciones)
-        predictedAmount *= 1.05 // 5% más en verano
-      }
+    // Ajustes estacionales adicionales basados en patrones comunes
+    const month = monthNumber + 1 // 1-12 para legibilidad
+    let seasonalAdjustment = 1
+
+    if (month === 12) {
+      // Diciembre (bonos de fin de año)
+      seasonalAdjustment *= 1.1
+    } else if (month === 1) {
+      // Enero
+      seasonalAdjustment *= 0.95
+    } else if ([6, 7].includes(month)) {
+      // Junio, Julio (vacaciones)
+      seasonalAdjustment *= 1.05
     }
+
+    predictedAmount *= seasonalAdjustment
 
     // Análisis de fuentes para predicciones más precisas
     const predictedSources: Record<string, number> = {}
@@ -619,6 +762,8 @@ export function predictIncome(
     }
 
     // Añadir ingresos recurrentes específicos
+    const monthRecurringIncome: RecurringIncome[] = []
+
     Object.values(recurringIncome).forEach((income) => {
       if (income.frequency > 0) {
         // Verificar si alguna fecha cae en este mes
@@ -631,9 +776,18 @@ export function predictIncome(
           }
 
           // Añadir el ingreso por cada ocurrencia
-          monthDates.forEach(() => {
+          monthDates.forEach((date) => {
             predictedSources[income.category] += income.amount
             predictedAmount += income.amount
+
+            // Registrar para el análisis detallado
+            monthRecurringIncome.push({
+              description: income.description,
+              category: income.category,
+              amount: income.amount,
+              date: date.toISOString(),
+              confidence: income.confidence,
+            })
           })
         }
       }
@@ -657,11 +811,29 @@ export function predictIncome(
     // Limitar la confianza entre 0.4 y 0.95
     confidence = Math.max(0.4, Math.min(0.95, confidence))
 
+    // Determinar tendencia
+    let trend: "increasing" | "decreasing" | "stable" = "stable"
+    if (slope > 0 && slope / (avgRecentMonthlyIncome || 1) > 0.05) {
+      trend = "increasing"
+    } else if (slope < 0 && Math.abs(slope) / (avgRecentMonthlyIncome || 1) > 0.05) {
+      trend = "decreasing"
+    }
+
+    // Crear factores estacionales para la interfaz
+    const seasonalFactorsForUI: Record<string, number> = {}
+    Object.entries(seasonalFactors).forEach(([month, factor]) => {
+      seasonalFactorsForUI[format(new Date(2023, Number.parseInt(month), 1), "MMMM")] = factor
+    })
+
     predictions.push({
       month: monthKey,
       amount: Math.max(0, predictedAmount),
       sources: predictedSources,
       confidence,
+      trend,
+      volatility: volatilityFactor,
+      seasonalFactors: seasonalFactorsForUI,
+      recurringIncome: monthRecurringIncome,
     })
   }
 
@@ -677,6 +849,8 @@ export function identifyAnomalousSpending(transactions: Transaction[]): {
   description: string
   severity: "high" | "medium" | "low"
   transactions: Transaction[]
+  anomalyScore: number
+  impactOnBudget: number
 }[] {
   const currentDate = new Date()
   const currentMonth = startOfMonth(currentDate)
@@ -690,6 +864,9 @@ export function identifyAnomalousSpending(transactions: Transaction[]): {
   const historicalExpenses: Record<string, number[]> = {}
   const transactionCounts: Record<string, number> = {}
   const categoryTransactions: Record<string, Transaction[]> = {}
+
+  // Total de gastos para calcular impacto en el presupuesto
+  let totalCurrentMonthExpenses = 0
 
   transactions
     .filter((t) => t.type === "expense")
@@ -710,6 +887,7 @@ export function identifyAnomalousSpending(transactions: Transaction[]): {
       // Guardar transacciones por categoría para el mes actual
       if (isSameMonth(date, currentMonth)) {
         categoryTransactions[category].push(transaction)
+        totalCurrentMonthExpenses += transaction.amount
       }
 
       // Agrupar por período
@@ -790,18 +968,22 @@ export function identifyAnomalousSpending(transactions: Transaction[]): {
       let isAnomaly = false
       let percentageIncrease = 0
       let severity: "high" | "medium" | "low" = "low"
+      let anomalyScore = 0
 
       // Calcular aumento porcentual respecto al mes anterior
       if (lastMonthAmount > 0) {
         percentageIncrease = ((amount - lastMonthAmount) / lastMonthAmount) * 100
         if (percentageIncrease >= 30) {
           isAnomaly = true
+          anomalyScore += percentageIncrease / 100
 
           // Determinar severidad basada en el porcentaje de aumento
           if (percentageIncrease >= 100) {
             severity = "high"
+            anomalyScore += 0.5
           } else if (percentageIncrease >= 50) {
             severity = "medium"
+            anomalyScore += 0.3
           }
         }
       }
@@ -812,12 +994,15 @@ export function identifyAnomalousSpending(transactions: Transaction[]): {
         if (zScore > 2) {
           isAnomaly = true
           percentageIncrease = ((amount - stats.avg) / stats.avg) * 100
+          anomalyScore += zScore / 5
 
           // Determinar severidad basada en el z-score
           if (zScore > 3) {
             severity = "high"
+            anomalyScore += 0.5
           } else if (zScore > 2.5) {
             severity = "medium"
+            anomalyScore += 0.3
           }
         }
       }
@@ -830,8 +1015,18 @@ export function identifyAnomalousSpending(transactions: Transaction[]): {
           isAnomaly = true
           percentageIncrease = ((amount - expectedAmount) / expectedAmount) * 100
           severity = "low"
+          anomalyScore += 0.2
         }
       }
+
+      // Considerar la volatilidad histórica
+      anomalyScore += stats.volatility * 0.5
+
+      // Normalizar el score de anomalía entre 0 y 1
+      anomalyScore = Math.min(1, anomalyScore)
+
+      // Calcular impacto en el presupuesto
+      const impactOnBudget = totalCurrentMonthExpenses > 0 ? amount / totalCurrentMonthExpenses : 0
 
       if (isAnomaly) {
         // Generar descripción personalizada
@@ -853,6 +1048,8 @@ export function identifyAnomalousSpending(transactions: Transaction[]): {
           description,
           severity,
           transactions: categoryTransactions[category] || [],
+          anomalyScore,
+          impactOnBudget,
         })
       }
     }
@@ -864,7 +1061,7 @@ export function identifyAnomalousSpending(transactions: Transaction[]): {
     if (severityOrder[a.severity] !== severityOrder[b.severity]) {
       return severityOrder[a.severity] - severityOrder[b.severity]
     }
-    return b.percentageIncrease - a.percentageIncrease
+    return b.anomalyScore - a.anomalyScore
   })
 }
 
@@ -872,10 +1069,11 @@ export function identifyAnomalousSpending(transactions: Transaction[]): {
 export function suggestSavingsGoals(transactions: Transaction[]): {
   amount: number
   description: string
-  potentialSavings: { category: string; amount: number; suggestion: string }[]
+  potentialSavings: { category: string; amount: number; suggestion: string; impact: number }[]
   savingsRate: number
   timeToGoal: { months: number; amount: number; description: string }[]
   confidence: number
+  scenarios: { name: string; savingsRate: number; monthsToEmergencyFund: number; description: string }[]
 } {
   // Obtener predicciones para los próximos meses
   const monthlyIncome = predictIncome(transactions, 3)
@@ -911,7 +1109,8 @@ export function suggestSavingsGoals(transactions: Transaction[]): {
     })
 
   // Identificar categorías con potencial de ahorro
-  const potentialSavings: { category: string; amount: number; suggestion: string; priority: number }[] = []
+  const potentialSavings: { category: string; amount: number; suggestion: string; priority: number; impact: number }[] =
+    []
 
   Object.entries(categoryExpenses).forEach(([category, amounts]) => {
     if (amounts.length >= 3) {
@@ -970,6 +1169,9 @@ export function suggestSavingsGoals(transactions: Transaction[]): {
           priority = 3
       }
 
+      // Calcular impacto del ahorro
+      const impact = avgPredictedExpenses > 0 ? savingsPotential / avgPredictedExpenses : 0
+
       if (savingsPotential >= 10) {
         // Solo sugerir si el ahorro es significativo
         potentialSavings.push({
@@ -977,6 +1179,7 @@ export function suggestSavingsGoals(transactions: Transaction[]): {
           amount: savingsPotential,
           suggestion,
           priority,
+          impact,
         })
       }
     }
@@ -1018,6 +1221,48 @@ export function suggestSavingsGoals(transactions: Transaction[]): {
       description: "Fondo de emergencia completo (6 meses de gastos)",
     })
   }
+
+  // Generar escenarios de ahorro
+  const scenarios = []
+
+  // Escenario 1: Conservador (mantener gastos actuales)
+  const conservativeSavingsRate = savingsRate
+  const conservativeMonthsToEmergency =
+    potentialMonthlySavings > 0 ? Math.ceil(emergencyFund3Months / potentialMonthlySavings) : Number.POSITIVE_INFINITY
+
+  scenarios.push({
+    name: "Conservador",
+    savingsRate: conservativeSavingsRate,
+    monthsToEmergencyFund: conservativeMonthsToEmergency,
+    description: "Mantener sus hábitos de gasto actuales.",
+  })
+
+  // Escenario 2: Moderado (implementar algunas sugerencias de ahorro)
+  const moderateSavings =
+    availableForSavings + potentialSavings.slice(0, 2).reduce((sum, item) => sum + item.amount, 0) * 0.5
+  const moderateSavingsRate = avgPredictedIncome > 0 ? (moderateSavings / avgPredictedIncome) * 100 : 0
+  const moderateMonthsToEmergency =
+    moderateSavings > 0 ? Math.ceil(emergencyFund3Months / moderateSavings) : Number.POSITIVE_INFINITY
+
+  scenarios.push({
+    name: "Moderado",
+    savingsRate: moderateSavingsRate,
+    monthsToEmergencyFund: moderateMonthsToEmergency,
+    description: "Implementar algunas sugerencias de ahorro en las categorías principales.",
+  })
+
+  // Escenario 3: Agresivo (implementar todas las sugerencias de ahorro)
+  const aggressiveSavings = availableForSavings + potentialSavings.reduce((sum, item) => sum + item.amount, 0) * 0.8
+  const aggressiveSavingsRate = avgPredictedIncome > 0 ? (aggressiveSavings / avgPredictedIncome) * 100 : 0
+  const aggressiveMonthsToEmergency =
+    aggressiveSavings > 0 ? Math.ceil(emergencyFund3Months / aggressiveSavings) : Number.POSITIVE_INFINITY
+
+  scenarios.push({
+    name: "Agresivo",
+    savingsRate: aggressiveSavingsRate,
+    monthsToEmergencyFund: aggressiveMonthsToEmergency,
+    description: "Implementar todas las sugerencias de ahorro y reducir gastos no esenciales al mínimo.",
+  })
 
   // Calcular meta de ahorro recomendada
   let suggestedSavings = 0
@@ -1063,12 +1308,566 @@ export function suggestSavingsGoals(transactions: Transaction[]): {
   return {
     amount: Math.round(suggestedSavings),
     description,
-    potentialSavings: potentialSavings.slice(0, 3), // Top 3 áreas de ahorro
+    potentialSavings: potentialSavings.slice(0, 3).map(({ category, amount, suggestion, impact }) => ({
+      category,
+      amount,
+      suggestion,
+      impact,
+    })),
     savingsRate,
     timeToGoal,
     confidence,
+    scenarios,
   }
 }
 
-// Exportar las funciones mejoradas
+// Función mejorada para categorizar automáticamente una transacción basada en su descripción
+export function categorizeTranasction(description: string): {
+  category: TransactionCategory
+  confidence: number
+  alternativeCategories: { category: TransactionCategory; confidence: number }[]
+} {
+  description = description.toLowerCase()
+
+  // Mapeo de palabras clave a categorías con pesos
+  const categoryKeywords: Record<TransactionCategory, { terms: string[]; weights: number[] }> = {
+    food: {
+      terms: [
+        "grocery",
+        "restaurant",
+        "cafe",
+        "coffee",
+        "food",
+        "meal",
+        "dinner",
+        "lunch",
+        "breakfast",
+        "supermarket",
+        "burger",
+        "pizza",
+        "taco",
+        "sushi",
+      ],
+      weights: [1, 1, 0.9, 0.9, 1, 0.9, 0.9, 0.9, 0.9, 1, 0.9, 0.9, 0.9, 0.9],
+    },
+    transportation: {
+      terms: [
+        "gas",
+        "fuel",
+        "uber",
+        "lyft",
+        "taxi",
+        "car",
+        "auto",
+        "vehicle",
+        "transport",
+        "bus",
+        "train",
+        "subway",
+        "metro",
+        "parking",
+        "toll",
+      ],
+      weights: [1, 1, 1, 1, 1, 0.8, 0.7, 0.7, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
+    },
+    housing: {
+      terms: [
+        "rent",
+        "mortgage",
+        "apartment",
+        "house",
+        "property",
+        "real estate",
+        "lease",
+        "landlord",
+        "maintenance",
+        "repair",
+        "home",
+        "condo",
+        "hoa",
+      ],
+      weights: [1, 1, 0.9, 0.8, 0.8, 0.9, 0.9, 0.9, 0.7, 0.7, 0.7, 0.9, 0.9],
+    },
+    utilities: {
+      terms: [
+        "electric",
+        "water",
+        "gas",
+        "internet",
+        "phone",
+        "utility",
+        "bill",
+        "service",
+        "cable",
+        "tv",
+        "streaming",
+        "subscription",
+        "wifi",
+      ],
+      weights: [1, 1, 0.9, 1, 0.9, 1, 0.8, 0.7, 0.9, 0.8, 0.8, 0.7, 0.9],
+    },
+    entertainment: {
+      terms: [
+        "movie",
+        "theatre",
+        "concert",
+        "show",
+        "game",
+        "subscription",
+        "netflix",
+        "spotify",
+        "disney",
+        "hulu",
+        "amazon prime",
+        "ticket",
+        "event",
+        "festival",
+      ],
+      weights: [1, 1, 1, 0.8, 0.8, 0.7, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
+    },
+    health: {
+      terms: [
+        "doctor",
+        "medical",
+        "health",
+        "pharmacy",
+        "medicine",
+        "fitness",
+        "gym",
+        "hospital",
+        "clinic",
+        "dental",
+        "vision",
+        "insurance",
+        "therapy",
+        "vitamin",
+      ],
+      weights: [1, 1, 0.9, 1, 0.9, 0.9, 0.9, 1, 0.9, 0.9, 0.9, 0.8, 0.9, 0.8],
+    },
+    shopping: {
+      terms: [
+        "amazon",
+        "walmart",
+        "target",
+        "store",
+        "mall",
+        "shop",
+        "purchase",
+        "buy",
+        "clothing",
+        "electronics",
+        "furniture",
+        "retail",
+        "online",
+      ],
+      weights: [0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.7, 0.7, 0.9, 0.9, 0.9, 0.8, 0.8],
+    },
+    personal: {
+      terms: [
+        "haircut",
+        "salon",
+        "spa",
+        "beauty",
+        "personal care",
+        "grooming",
+        "cosmetics",
+        "makeup",
+        "skincare",
+        "barber",
+        "manicure",
+        "pedicure",
+      ],
+      weights: [1, 0.9, 0.9, 0.9, 1, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
+    },
+    education: {
+      terms: [
+        "school",
+        "college",
+        "university",
+        "course",
+        "class",
+        "book",
+        "tuition",
+        "student",
+        "loan",
+        "education",
+        "learning",
+        "training",
+        "workshop",
+        "seminar",
+      ],
+      weights: [0.9, 1, 1, 0.9, 0.8, 0.7, 1, 0.8, 0.8, 1, 0.9, 0.9, 0.9, 0.9],
+    },
+    travel: {
+      terms: [
+        "hotel",
+        "flight",
+        "airline",
+        "vacation",
+        "trip",
+        "travel",
+        "booking",
+        "airbnb",
+        "resort",
+        "cruise",
+        "tour",
+        "holiday",
+        "lodging",
+      ],
+      weights: [1, 1, 0.9, 1, 0.9, 1, 0.8, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
+    },
+    salary: {
+      terms: [
+        "salary",
+        "paycheck",
+        "income",
+        "wage",
+        "payment",
+        "deposit",
+        "direct deposit",
+        "payroll",
+        "compensation",
+        "bonus",
+        "commission",
+      ],
+      weights: [1, 1, 0.9, 0.9, 0.8, 0.8, 0.9, 0.9, 0.9, 0.9, 0.9],
+    },
+    investment: {
+      terms: [
+        "dividend",
+        "interest",
+        "stock",
+        "bond",
+        "investment",
+        "return",
+        "portfolio",
+        "fund",
+        "etf",
+        "mutual fund",
+        "roth",
+        "ira",
+        "401k",
+        "brokerage",
+      ],
+      weights: [1, 0.9, 0.9, 0.9, 1, 0.8, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
+    },
+    other: {
+      terms: ["other", "miscellaneous", "misc", "various", "general", "unknown"],
+      weights: [1, 1, 1, 0.9, 0.9, 0.8],
+    },
+    transfer: {
+      terms: ["transfer", "move", "send", "receive", "wire", "zelle", "venmo", "paypal", "cash app"],
+      weights: [1, 0.8, 0.8, 0.8, 0.9, 0.9, 0.9, 0.9, 0.9],
+    },
+  }
+
+  // Sistema de puntuación para determinar la categoría
+  const scores: Record<string, number> = {}
+
+  // Inicializar puntuaciones
+  Object.keys(categoryKeywords).forEach((category) => {
+    scores[category] = 0
+  })
+
+  // Calcular puntuaciones basadas en coincidencias de palabras clave
+  Object.entries(categoryKeywords).forEach(([category, data]) => {
+    data.terms.forEach((term, index) => {
+      if (description.includes(term)) {
+        scores[category] += data.weights[index]
+      }
+    })
+  })
+
+  // Análisis contextual adicional
+  // Patrones numéricos para mejorar la precisión
+  const amountPattern = /\$?\d+(\.\d{2})?/
+  if (amountPattern.test(description)) {
+    // Si hay un monto, probablemente sea una transacción de compra
+    if (scores["shopping"] > 0) scores["shopping"] *= 1.2
+    if (scores["food"] > 0) scores["food"] *= 1.2
+  }
+
+  // Palabras que indican periodicidad (probablemente servicios o suscripciones)
+  if (/monthly|subscription|recurring|bill/i.test(description)) {
+    if (scores["utilities"] > 0) scores["utilities"] *= 1.3
+    if (scores["entertainment"] > 0) scores["entertainment"] *= 1.2
+  }
+
+  // Encontrar la categoría con mayor puntuación
+  let bestCategory: TransactionCategory = "other"
+  let highestScore = 0
+
+  Object.entries(scores).forEach(([category, score]) => {
+    if (score > highestScore) {
+      highestScore = score
+      bestCategory = category as TransactionCategory
+    }
+  })
+
+  // Calcular nivel de confianza (normalizado entre 0 y 1)
+  const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0)
+  const confidence = totalScore > 0 ? highestScore / totalScore : 0
+
+  // Encontrar categorías alternativas
+  const alternatives: { category: TransactionCategory; confidence: number }[] = []
+
+  Object.entries(scores).forEach(([category, score]) => {
+    if (category !== bestCategory && score > 0) {
+      alternatives.push({
+        category: category as TransactionCategory,
+        confidence: totalScore > 0 ? score / totalScore : 0,
+      })
+    }
+  })
+
+  // Ordenar alternativas por confianza
+  alternatives.sort((a, b) => b.confidence - a.confidence)
+
+  return {
+    category: bestCategory,
+    confidence: Math.min(confidence, 0.95), // Limitar confianza máxima a 95%
+    alternativeCategories: alternatives.slice(0, 2), // Devolver solo las 2 mejores alternativas
+  }
+}
+
+// Función para analizar patrones de gasto y generar insights personalizados
+export function generateFinancialInsights(transactions: Transaction[]): {
+  insights: string[]
+  spendingTrends: { category: string; trend: "increasing" | "decreasing" | "stable"; percentage: number }[]
+  topExpenseCategories: { category: string; percentage: number; amount: number }[]
+  savingsOpportunities: { description: string; potentialSavings: number; difficulty: "easy" | "medium" | "hard" }[]
+  anomalies: { description: string; severity: "high" | "medium" | "low"; category: string; amount: number }[]
+} {
+  const currentDate = new Date()
+  const threeMonthsAgo = subMonths(currentDate, 3)
+  const sixMonthsAgo = subMonths(currentDate, 6)
+
+  // Filtrar transacciones recientes
+  const recentTransactions = transactions.filter((t) => isAfter(parseISO(t.date), threeMonthsAgo))
+  const olderTransactions = transactions.filter(
+    (t) => isAfter(parseISO(t.date), sixMonthsAgo) && isBefore(parseISO(t.date), threeMonthsAgo),
+  )
+
+  // Calcular gastos por categoría para diferentes períodos
+  const recentExpensesByCategory: Record<string, number> = {}
+  const olderExpensesByCategory: Record<string, number> = {}
+  let totalRecentExpenses = 0
+  let totalRecentIncome = 0
+
+  recentTransactions
+    .filter((t) => t.type === "expense")
+    .forEach((transaction) => {
+      const category = transaction.category
+      if (!recentExpensesByCategory[category]) recentExpensesByCategory[category] = 0
+      recentExpensesByCategory[category] += transaction.amount
+      totalRecentExpenses += transaction.amount
+    })
+
+  recentTransactions
+    .filter((t) => t.type === "income")
+    .forEach((transaction) => {
+      totalRecentIncome += transaction.amount
+    })
+
+  olderTransactions
+    .filter((t) => t.type === "expense")
+    .forEach((transaction) => {
+      const category = transaction.category
+      if (!olderExpensesByCategory[category]) olderExpensesByCategory[category] = 0
+      olderExpensesByCategory[category] += transaction.amount
+    })
+
+  // Calcular tendencias de gasto
+  const spendingTrends: { category: string; trend: "increasing" | "decreasing" | "stable"; percentage: number }[] = []
+
+  Object.entries(recentExpensesByCategory).forEach(([category, amount]) => {
+    const olderAmount = olderExpensesByCategory[category] || 0
+
+    if (olderAmount > 0 && amount > 50) {
+      // Solo considerar categorías con gastos significativos
+      const changePercentage = ((amount - olderAmount) / olderAmount) * 100
+
+      let trend: "increasing" | "decreasing" | "stable" = "stable"
+      if (changePercentage > 10) trend = "increasing"
+      else if (changePercentage < -10) trend = "decreasing"
+
+      spendingTrends.push({
+        category,
+        trend,
+        percentage: Math.abs(changePercentage),
+      })
+    }
+  })
+
+  // Ordenar tendencias por magnitud del cambio
+  spendingTrends.sort((a, b) => b.percentage - a.percentage)
+
+  // Calcular categorías principales de gasto
+  const topExpenseCategories: { category: string; percentage: number; amount: number }[] = []
+
+  if (totalRecentExpenses > 0) {
+    Object.entries(recentExpensesByCategory)
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        percentage: (amount / totalRecentExpenses) * 100,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5) // Top 5 categorías
+      .forEach((item) => {
+        topExpenseCategories.push(item)
+      })
+  }
+
+  // Identificar oportunidades de ahorro
+  const savingsOpportunities: {
+    description: string
+    potentialSavings: number
+    difficulty: "easy" | "medium" | "hard"
+  }[] = []
+
+  // Comidas fuera de casa
+  const foodExpenses = recentExpensesByCategory["food"] || 0
+  if (foodExpenses > 200) {
+    savingsOpportunities.push({
+      description: "Reducir comidas fuera de casa y preparar más comidas en el hogar",
+      potentialSavings: foodExpenses * 0.3,
+      difficulty: "medium",
+    })
+  }
+
+  // Entretenimiento
+  const entertainmentExpenses = recentExpensesByCategory["entertainment"] || 0
+  if (entertainmentExpenses > 100) {
+    savingsOpportunities.push({
+      description: "Buscar alternativas gratuitas o de menor costo para entretenimiento",
+      potentialSavings: entertainmentExpenses * 0.4,
+      difficulty: "easy",
+    })
+  }
+
+  // Compras
+  const shoppingExpenses = recentExpensesByCategory["shopping"] || 0
+  if (shoppingExpenses > 200) {
+    savingsOpportunities.push({
+      description: "Posponer compras no esenciales y aprovechar rebajas",
+      potentialSavings: shoppingExpenses * 0.25,
+      difficulty: "medium",
+    })
+  }
+
+  // Transporte
+  const transportationExpenses = recentExpensesByCategory["transportation"] || 0
+  if (transportationExpenses > 150) {
+    savingsOpportunities.push({
+      description: "Considerar opciones de transporte público o compartir viajes",
+      potentialSavings: transportationExpenses * 0.2,
+      difficulty: "hard",
+    })
+  }
+
+  // Servicios
+  const utilitiesExpenses = recentExpensesByCategory["utilities"] || 0
+  if (utilitiesExpenses > 200) {
+    savingsOpportunities.push({
+      description: "Revisar planes de servicios y reducir consumo energético",
+      potentialSavings: utilitiesExpenses * 0.15,
+      difficulty: "medium",
+    })
+  }
+
+  // Ordenar por potencial de ahorro
+  savingsOpportunities.sort((a, b) => b.potentialSavings - a.potentialSavings)
+
+  // Identificar anomalías
+  const anomalies: { description: string; severity: "high" | "medium" | "low"; category: string; amount: number }[] = []
+
+  // Detectar categorías con gastos inusualmente altos
+  Object.entries(recentExpensesByCategory).forEach(([category, amount]) => {
+    const olderAmount = olderExpensesByCategory[category] || 0
+
+    if (olderAmount > 0) {
+      const changePercentage = ((amount - olderAmount) / olderAmount) * 100
+
+      if (changePercentage > 80 && amount > 100) {
+        let severity: "high" | "medium" | "low" = "low"
+
+        if (changePercentage > 150) {
+          severity = "high"
+        } else if (changePercentage > 100) {
+          severity = "medium"
+        }
+
+        anomalies.push({
+          description: `Gasto inusualmente alto en ${category}`,
+          severity,
+          category,
+          amount,
+        })
+      }
+    }
+  })
+
+  // Generar insights basados en los datos
+  const insights: string[] = []
+
+  // Insight sobre distribución de gastos
+  if (topExpenseCategories.length > 0) {
+    const topCategory = topExpenseCategories[0]
+    insights.push(
+      `Tu categoría principal de gasto es ${topCategory.category}, representando el ${topCategory.percentage.toFixed(1)}% de tus gastos totales.`,
+    )
+  }
+
+  // Insights sobre tendencias
+  spendingTrends.slice(0, 3).forEach((trend) => {
+    if (trend.trend === "increasing") {
+      insights.push(
+        `Tus gastos en ${trend.category} han aumentado un ${trend.percentage.toFixed(1)}% en los últimos 3 meses.`,
+      )
+    } else if (trend.trend === "decreasing") {
+      insights.push(
+        `Has reducido tus gastos en ${trend.category} un ${trend.percentage.toFixed(1)}% en los últimos 3 meses. ¡Buen trabajo!`,
+      )
+    }
+  })
+
+  // Insight sobre balance general
+  if (totalRecentIncome > 0) {
+    const savingsRate = ((totalRecentIncome - totalRecentExpenses) / totalRecentIncome) * 100
+
+    if (savingsRate > 20) {
+      insights.push(
+        `¡Excelente trabajo! Estás ahorrando el ${savingsRate.toFixed(1)}% de tus ingresos, lo cual es una tasa saludable.`,
+      )
+    } else if (savingsRate > 0) {
+      insights.push(
+        `Estás ahorrando el ${savingsRate.toFixed(1)}% de tus ingresos. Considera aumentar tu tasa de ahorro al 20% para mejorar tu salud financiera.`,
+      )
+    } else {
+      insights.push(
+        `Tus gastos superan tus ingresos en los últimos 3 meses. Considera revisar tu presupuesto para evitar endeudamiento.`,
+      )
+    }
+  }
+
+  // Insight sobre oportunidades de ahorro
+  if (savingsOpportunities.length > 0) {
+    const totalPotentialSavings = savingsOpportunities.reduce(
+      (sum, opportunity) => sum + opportunity.potentialSavings,
+      0,
+    )
+    insights.push(
+      `Podrías ahorrar hasta ${totalPotentialSavings.toFixed(0)} implementando cambios en tus hábitos de gasto.`,
+    )
+  }
+
+  return {
+    insights,
+    spendingTrends,
+    topExpenseCategories,
+    savingsOpportunities: savingsOpportunities.slice(0, 3),
+    anomalies,
+  }
+}
 

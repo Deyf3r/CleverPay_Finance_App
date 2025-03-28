@@ -1,298 +1,715 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { WalletIcon, Loader2, AlertCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { LogoIcon } from "@/components/logo-icon"
+import { useToast } from "@/components/ui/use-toast"
+import { Loader2, CheckCircle, AlertCircle, Camera, User, Lock, Mail, Eye, EyeOff } from "lucide-react"
+import Link from "next/link"
+import { useAuth } from "@/context/auth-context"
+import * as faceapi from "face-api.js"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [agreeTerms, setAgreeTerms] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [isFacebookLoading, setIsFacebookLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const { register, loginWithProvider } = useAuth()
+  const [isLoadingModels, setIsLoadingModels] = useState(true)
+  const [isFaceDetected, setIsFaceDetected] = useState(false)
+  const [isFaceRegistered, setIsFaceRegistered] = useState(false)
+  const [isCameraActive, setIsCameraActive] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const [step, setStep] = useState(1)
+  const [passwordStrength, setPasswordStrength] = useState(0)
+  const [passwordFeedback, setPasswordFeedback] = useState("")
+  const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null)
+  const [detectionInterval, setDetectionInterval] = useState<NodeJS.Timeout | null>(null)
+  const [detectionCount, setDetectionCount] = useState(0)
+  const [registrationProgress, setRegistrationProgress] = useState(0)
+
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const router = useRouter()
+  const { toast } = useToast()
+  const { register } = useAuth()
 
-  const validateForm = () => {
-    if (!name.trim()) {
-      setError("Por favor, ingresa tu nombre completo.")
-      return false
-    }
-
-    if (!email.trim()) {
-      setError("Por favor, ingresa tu correo electrónico.")
-      return false
-    }
-
+  // Password strength checker
+  useEffect(() => {
     if (!password) {
-      setError("Por favor, ingresa una contraseña.")
-      return false
+      setPasswordStrength(0)
+      setPasswordFeedback("")
+      return
     }
 
-    if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.")
-      return false
+    let strength = 0
+    // Length check
+    if (password.length >= 8) strength += 1
+    // Contains number
+    if (/\d/.test(password)) strength += 1
+    // Contains lowercase
+    if (/[a-z]/.test(password)) strength += 1
+    // Contains uppercase
+    if (/[A-Z]/.test(password)) strength += 1
+    // Contains special char
+    if (/[^A-Za-z0-9]/.test(password)) strength += 1
+
+    setPasswordStrength(strength)
+
+    // Feedback
+    if (strength <= 2) {
+      setPasswordFeedback("Débil")
+    } else if (strength <= 4) {
+      setPasswordFeedback("Medio")
+    } else {
+      setPasswordFeedback("Fuerte")
+    }
+  }, [password])
+
+  // Load face-api models
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        setIsLoadingModels(true)
+
+        // Use CDN URLs for models instead of local files
+        const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models"
+
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ])
+
+        console.log("Face detection models loaded successfully")
+        setIsLoadingModels(false)
+      } catch (error) {
+        console.error("Error loading face detection models:", error)
+        setIsLoadingModels(false)
+        setCameraError("No se pudieron cargar los modelos de detección facial")
+      }
     }
 
-    if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden.")
-      return false
+    loadModels()
+
+    // Cleanup function
+    return () => {
+      if (isCameraActive) {
+        stopCamera()
+      }
+
+      if (detectionInterval) {
+        clearInterval(detectionInterval)
+      }
+    }
+  }, [])
+
+  const startCamera = async () => {
+    // Only run in browser environment
+    if (typeof window === "undefined") return
+
+    // Reset states
+    setIsCameraActive(false)
+    setIsFaceDetected(false)
+    setCameraError(null)
+    setDetectionCount(0)
+    setRegistrationProgress(0)
+
+    // Clear any existing intervals
+    if (detectionInterval) {
+      clearInterval(detectionInterval)
+      setDetectionInterval(null)
     }
 
-    if (!agreeTerms) {
-      setError("Debes aceptar los términos y condiciones para continuar.")
-      return false
+    // Check if mediaDevices API is available
+    if (!navigator || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      console.error("Media Devices API not supported in this browser")
+      setCameraError("Tu navegador no soporta acceso a la cámara")
+      return
     }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      setError("Por favor, ingresa un correo electrónico válido.")
-      return false
-    }
-
-    return true
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-
-    if (!validateForm()) return
-
-    setIsLoading(true)
 
     try {
-      const result = await register(name, email, password)
+      // Try to get camera access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: "user",
+        },
+      })
 
-      if (result.success) {
-        router.push("/")
-      } else {
-        setError(result.message || "Error al registrarse. Por favor, inténtalo de nuevo.")
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        setIsCameraActive(true)
+
+        // Wait for video to be ready
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            videoRef.current.play()
+            detectFace()
+          }
+        }
       }
     } catch (error) {
-      setError("Ocurrió un error inesperado. Por favor, inténtalo de nuevo.")
-      console.error("Registration failed:", error)
+      console.error("Error accessing camera:", error)
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        setCameraError("Acceso a la cámara denegado. Por favor, permite el acceso.")
+      } else if (error instanceof DOMException && error.name === "NotFoundError") {
+        setCameraError("No se detectó ninguna cámara en tu dispositivo")
+      } else {
+        setCameraError("Error al acceder a la cámara")
+      }
+    }
+  }
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream
+      const tracks = stream.getTracks()
+      tracks.forEach((track) => track.stop())
+      videoRef.current.srcObject = null
+      setIsCameraActive(false)
+    }
+
+    // Clear any detection intervals
+    if (detectionInterval) {
+      clearInterval(detectionInterval)
+      setDetectionInterval(null)
+    }
+  }
+
+  const detectFace = async () => {
+    if (!videoRef.current || !canvasRef.current || !isCameraActive) return
+
+    try {
+      // Use withFaceLandmarks and withFaceDescriptor for better recognition
+      const detections = await faceapi
+        .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
+        .withFaceLandmarks()
+        .withFaceDescriptors()
+
+      // Draw detections
+      const canvas = canvasRef.current
+      const displaySize = { width: videoRef.current.width, height: videoRef.current.height }
+      faceapi.matchDimensions(canvas, displaySize)
+
+      const resizedDetections = faceapi.resizeResults(detections, displaySize)
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        faceapi.draw.drawDetections(canvas, resizedDetections)
+        faceapi.draw.drawFaceLandmarks(canvas, resizedDetections)
+      }
+
+      // Update face detection state
+      if (detections.length > 0) {
+        // Get the face with the highest confidence score
+        const bestMatch = detections.reduce((prev, current) =>
+          prev.detection.score > current.detection.score ? prev : current,
+        )
+
+        setIsFaceDetected(true)
+
+        // Store the face descriptor for later use
+        if (bestMatch.descriptor) {
+          setFaceDescriptor(bestMatch.descriptor)
+
+          // Increment detection count for progress
+          setDetectionCount((prev) => {
+            const newCount = prev + 1
+            // Calculate progress percentage (max 100%)
+            const progress = Math.min(Math.floor((newCount / 30) * 100), 100)
+            setRegistrationProgress(progress)
+            return newCount
+          })
+
+          // After sufficient detections, consider it registered
+          if (detectionCount >= 30) {
+            registerFace(bestMatch.descriptor)
+          }
+        }
+      } else {
+        setIsFaceDetected(false)
+        // Reset progress if face is lost
+        if (detectionCount > 0 && detectionCount < 15) {
+          setDetectionCount(0)
+          setRegistrationProgress(0)
+        }
+      }
+
+      // Continue detection if camera is still active
+      if (isCameraActive && !isFaceRegistered) {
+        requestAnimationFrame(detectFace)
+      }
+    } catch (error) {
+      console.error("Error in face detection:", error)
+      setCameraError("Error en la detección facial")
+    }
+  }
+
+  const registerFace = (descriptor: Float32Array) => {
+    try {
+      // Store the face descriptor in localStorage
+      // In a real app, you would send this to your backend
+      const faceData = {
+        userId: email, // Use email as identifier
+        descriptor: Array.from(descriptor), // Convert to regular array for storage
+        createdAt: new Date().toISOString(),
+      }
+
+      localStorage.setItem("faceAuthData", JSON.stringify(faceData))
+
+      // Update state
+      setIsFaceRegistered(true)
+      stopCamera()
+
+      toast({
+        title: "Rostro registrado",
+        description: "Tu rostro ha sido registrado correctamente para autenticación biométrica",
+      })
+    } catch (error) {
+      console.error("Error registering face:", error)
+      setCameraError("Error al registrar el rostro")
+    }
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (step < 3) {
+      // Validate current step
+      if (step === 1) {
+        if (!name || !email) {
+          toast({
+            title: "Campos requeridos",
+            description: "Por favor completa todos los campos",
+            variant: "destructive",
+          })
+          return
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          toast({
+            title: "Email inválido",
+            description: "Por favor ingresa un email válido",
+            variant: "destructive",
+          })
+          return
+        }
+
+        setStep(2)
+        return
+      }
+
+      if (step === 2) {
+        if (!password || !confirmPassword) {
+          toast({
+            title: "Campos requeridos",
+            description: "Por favor completa todos los campos",
+            variant: "destructive",
+          })
+          return
+        }
+
+        if (password !== confirmPassword) {
+          toast({
+            title: "Las contraseñas no coinciden",
+            description: "Por favor verifica que las contraseñas sean iguales",
+            variant: "destructive",
+          })
+          return
+        }
+
+        if (passwordStrength < 3) {
+          toast({
+            title: "Contraseña débil",
+            description: "Por favor usa una contraseña más segura",
+            variant: "destructive",
+          })
+          return
+        }
+
+        setStep(3)
+        return
+      }
+    }
+
+    // Final registration
+    try {
+      setIsLoading(true)
+
+      // Create biometric data object
+      const biometricData = faceDescriptor
+        ? {
+            hasFaceRegistration: true,
+            faceDescriptor: Array.from(faceDescriptor),
+          }
+        : {
+            hasFaceRegistration: false,
+          }
+
+      // Register user with biometric data
+      await register(name, email, password, undefined, biometricData)
+
+      toast({
+        title: "Registro exitoso",
+        description: "Tu cuenta ha sido creada correctamente",
+      })
+
+      // Redirect to login
+      router.push("/login")
+    } catch (error) {
+      console.error("Registration error:", error)
+      toast({
+        title: "Error de registro",
+        description: "No se pudo completar el registro. Inténtalo de nuevo.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleGoogleLogin = async () => {
-    setError(null)
-    setIsGoogleLoading(true)
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return (
+          <>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nombre completo</Label>
+                <div className="relative">
+                  <Input
+                    id="name"
+                    placeholder="Ingresa tu nombre completo"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                </div>
+              </div>
 
-    try {
-      const result = await loginWithProvider("google")
+              <div className="space-y-2">
+                <Label htmlFor="email">Correo electrónico</Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Ingresa tu correo electrónico"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+            </div>
 
-      if (result.success) {
-        router.push("/")
-      } else {
-        setError(result.message || "Error al iniciar sesión con Google. Por favor, inténtalo de nuevo.")
-      }
-    } catch (error) {
-      setError("Ocurrió un error inesperado. Por favor, inténtalo de nuevo.")
-      console.error("Google login failed:", error)
-    } finally {
-      setIsGoogleLoading(false)
-    }
-  }
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" asChild>
+                <Link href="/login">Volver</Link>
+              </Button>
+              <Button onClick={() => handleRegister(new Event("submit") as unknown as React.FormEvent)}>
+                Continuar
+              </Button>
+            </div>
+          </>
+        )
 
-  const handleFacebookLogin = async () => {
-    setError(null)
-    setIsFacebookLoading(true)
+      case 2:
+        return (
+          <>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Crea una contraseña segura"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10"
+                    required
+                  />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
 
-    try {
-      const result = await loginWithProvider("facebook")
+                {password && (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${
+                            passwordStrength <= 2
+                              ? "bg-red-500"
+                              : passwordStrength <= 4
+                                ? "bg-yellow-500"
+                                : "bg-green-500"
+                          }`}
+                          style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm">{passwordFeedback}</span>
+                    </div>
+                    <ul className="text-xs text-gray-500 mt-2 space-y-1">
+                      <li className={password.length >= 8 ? "text-green-500" : ""}>• Mínimo 8 caracteres</li>
+                      <li className={/\d/.test(password) ? "text-green-500" : ""}>• Al menos un número</li>
+                      <li className={/[A-Z]/.test(password) ? "text-green-500" : ""}>• Al menos una mayúscula</li>
+                      <li className={/[^A-Za-z0-9]/.test(password) ? "text-green-500" : ""}>
+                        • Al menos un carácter especial
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
 
-      if (result.success) {
-        router.push("/")
-      } else {
-        setError(result.message || "Error al iniciar sesión con Facebook. Por favor, inténtalo de nuevo.")
-      }
-    } catch (error) {
-      setError("Ocurrió un error inesperado. Por favor, inténtalo de nuevo.")
-      console.error("Facebook login failed:", error)
-    } finally {
-      setIsFacebookLoading(false)
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirma tu contraseña"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-10 pr-10"
+                    required
+                  />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+
+                {password && confirmPassword && (
+                  <div className="flex items-center gap-2 mt-2">
+                    {password === confirmPassword ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-green-500">Las contraseñas coinciden</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm text-red-500">Las contraseñas no coinciden</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" onClick={() => setStep(1)}>
+                Atrás
+              </Button>
+              <Button onClick={() => handleRegister(new Event("submit") as unknown as React.FormEvent)}>
+                Continuar
+              </Button>
+            </div>
+          </>
+        )
+
+      case 3:
+        return (
+          <>
+            <div className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-gray-500">
+                  Para mayor seguridad, registra tu rostro para el inicio de sesión biométrico
+                </p>
+              </div>
+
+              <div className="relative mx-auto w-full max-w-[320px] h-[240px] bg-gray-100 rounded-lg overflow-hidden">
+                {isLoadingModels ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                    <p className="text-sm text-gray-500">Cargando modelos de reconocimiento facial...</p>
+                  </div>
+                ) : cameraError ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                    <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
+                    <p className="text-sm text-center text-gray-700">{cameraError}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                      onClick={() => {
+                        setCameraError(null)
+                        startCamera()
+                      }}
+                    >
+                      Reintentar
+                    </Button>
+                  </div>
+                ) : isFaceRegistered ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-50">
+                    <CheckCircle className="h-12 w-12 text-green-500 mb-2" />
+                    <p className="text-sm font-medium text-green-700">¡Rostro registrado con éxito!</p>
+                  </div>
+                ) : isCameraActive ? (
+                  <>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      width={320}
+                      height={240}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <canvas ref={canvasRef} width={320} height={240} className="absolute inset-0 w-full h-full" />
+                    <div
+                      className="absolute inset-0 border-4 rounded-lg border-transparent transition-colors duration-300"
+                      style={{ borderColor: isFaceDetected ? "rgba(34, 197, 94, 0.5)" : "rgba(239, 68, 68, 0.5)" }}
+                    />
+
+                    {/* Add progress indicator */}
+                    {isFaceDetected && registrationProgress > 0 && (
+                      <div className="absolute bottom-10 left-4 right-4">
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                          <div
+                            className="bg-green-600 h-2.5 rounded-full transition-all duration-300"
+                            style={{ width: `${registrationProgress}%` }}
+                          ></div>
+                        </div>
+                        <p className="text-xs text-center mt-1 font-medium">
+                          {registrationProgress < 100
+                            ? `Registrando rostro: ${registrationProgress}%`
+                            : "Procesando..."}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          isFaceDetected ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {isFaceDetected ? "Rostro detectado" : "Posiciona tu rostro en el centro"}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <Camera className="h-10 w-10 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500 mb-4">Cámara desactivada</p>
+                    <Button variant="outline" size="sm" onClick={startCamera}>
+                      Activar cámara
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="text-center mt-4">
+                <p className="text-xs text-gray-500">
+                  {isFaceRegistered
+                    ? "Tu rostro ha sido registrado y se utilizará para verificar tu identidad al iniciar sesión."
+                    : "Posiciona tu rostro frente a la cámara y mantente quieto para completar el registro biométrico."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" onClick={() => setStep(2)}>
+                Atrás
+              </Button>
+              <Button onClick={handleRegister} disabled={isLoading || (!isFaceRegistered && isCameraActive)}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Registrando...
+                  </>
+                ) : isFaceRegistered ? (
+                  "Completar registro"
+                ) : (
+                  "Registrar sin biometría"
+                )}
+              </Button>
+            </div>
+          </>
+        )
+
+      default:
+        return null
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-md dark:border-border/20 elevated-surface">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-2">
-            <WalletIcon className="h-10 w-10 text-primary" />
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 flex flex-col items-center">
+          <div className="w-12 h-12 mb-2">
+            <LogoIcon />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Crear cuenta</CardTitle>
-          <CardDescription className="text-center">Ingresa tus datos para registrarte</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <CardDescription className="text-center">Ingresa tus datos para registrarte en CleverPay</CardDescription>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre completo</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Juan Pérez"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="dark:bg-muted/10 dark:border-border/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="dark:bg-muted/10 dark:border-border/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="dark:bg-muted/10 dark:border-border/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirmar contraseña</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="dark:bg-muted/10 dark:border-border/30"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="terms"
-                className="dark:border-border/50"
-                checked={agreeTerms}
-                onCheckedChange={(checked) => setAgreeTerms(checked === true)}
-                required
-              />
-              <Label htmlFor="terms" className="text-sm font-normal">
-                Acepto los{" "}
-                <Link href="/terms" className="text-primary hover:underline">
-                  términos y condiciones
-                </Link>
-              </Label>
-            </div>
-            <Button
-              type="submit"
-              className="w-full dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Registrando...
-                </>
-              ) : (
-                "Crear cuenta"
-              )}
-            </Button>
-          </form>
-          <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">¿Ya tienes una cuenta? </span>
-            <Link href="/login" className="text-primary hover:underline">
-              Inicia sesión
-            </Link>
+          {/* Progress steps */}
+          <div className="w-full flex items-center justify-between mt-4 px-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    step === i
+                      ? "bg-primary text-white"
+                      : step > i
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-200 text-gray-500 dark:bg-gray-700"
+                  }`}
+                >
+                  {step > i ? <CheckCircle className="h-5 w-5" /> : i}
+                </div>
+                <span className="text-xs mt-1">{i === 1 ? "Datos" : i === 2 ? "Seguridad" : "Biometría"}</span>
+              </div>
+            ))}
           </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t dark:border-border/30" />
+        </CardHeader>
+
+        <form onSubmit={handleRegister}>
+          <CardContent>{renderStep()}</CardContent>
+
+          <CardFooter className="flex flex-col">
+            <div className="text-center w-full mt-4 text-sm">
+              ¿Ya tienes una cuenta?{" "}
+              <Link href="/login" className="text-primary hover:underline">
+                Iniciar sesión
+              </Link>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">O continúa con</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Button
-              variant="outline"
-              className="dark:bg-muted/10 dark:border-border/30 dark:hover:bg-muted/20"
-              onClick={handleGoogleLogin}
-              disabled={isGoogleLoading}
-            >
-              {isGoogleLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                  <path d="M1 1h22v22H1z" fill="none" />
-                </svg>
-              )}
-              Google
-            </Button>
-            <Button
-              variant="outline"
-              className="dark:bg-muted/10 dark:border-border/30 dark:hover:bg-muted/20"
-              onClick={handleFacebookLogin}
-              disabled={isFacebookLoading}
-            >
-              {isFacebookLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
-                </svg>
-              )}
-              Facebook
-            </Button>
-          </div>
-        </CardFooter>
+          </CardFooter>
+        </form>
       </Card>
     </div>
   )

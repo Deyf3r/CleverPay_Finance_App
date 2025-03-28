@@ -10,6 +10,7 @@ export interface UserProfile {
   email: string
   avatar?: string
   provider?: "email" | "google" | "facebook"
+  subscriptionPlan?: string
   financialGoals?: {
     type: string
     target: number
@@ -38,7 +39,12 @@ interface AuthContextType {
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>
   loginWithProvider: (provider: "google" | "facebook") => Promise<{ success: boolean; message?: string }>
-  register: (name: string, email: string, password: string) => Promise<{ success: boolean; message?: string }>
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    subscriptionPlan?: string,
+  ) => Promise<{ success: boolean; message?: string }>
   logout: () => Promise<void>
   resetPassword: (email: string) => Promise<{ success: boolean; message?: string }>
   updateProfile: (data: Partial<UserProfile>) => void
@@ -53,6 +59,7 @@ const mockUser: UserProfile = {
   email: "alex@example.com",
   avatar: "/placeholder.svg?height=200&width=200",
   provider: "email",
+  subscriptionPlan: "premium",
   financialGoals: [
     {
       type: "savings",
@@ -197,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true }
   }
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, subscriptionPlan = "free") => {
     setIsLoading(true)
 
     // Simulate API call
@@ -218,6 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       avatar: "/placeholder.svg?height=200&width=200",
       provider: "email",
+      subscriptionPlan,
       notificationPreferences: {
         budgetAlerts: true,
         weeklyReports: true,

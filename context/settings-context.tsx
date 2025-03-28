@@ -64,6 +64,7 @@ interface SettingsContextType {
   settings: UserSettings
   updateSettings: (newSettings: Partial<UserSettings>) => void
   formatCurrency: (amount: number) => string
+  formatDate: (date: Date) => string
   translate: (key: string) => string
   translations: Record<string, string>
 }
@@ -108,6 +109,21 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "dashboard.export_data": "Export Data",
     "dashboard.total_transactions": "Total transactions",
     "dashboard.add_new": "Add new",
+    "dashboard.back": "Back",
+    "dashboard.overview": "Overview",
+    "dashboard.categories": "Categories",
+    "dashboard.trends": "Trends",
+    "dashboard.selected_period": "Selected period",
+    "dashboard.net_balance": "Net Balance",
+    "dashboard.balance": "Balance",
+    "dashboard.monthly_comparison": "Monthly comparison",
+    "dashboard.distribution_by_category": "Distribution by category",
+    "dashboard.highest_spending_categories": "Highest spending categories",
+    "dashboard.expense_categories": "Expense Categories",
+    "dashboard.top_expenses": "Top Expenses",
+    "dashboard.spending_trends": "Spending Trends",
+    "dashboard.monthly_spending_evolution": "Monthly spending evolution",
+    "dashboard.expense_ratio": "Expense Ratio",
 
     // Transactions
     "transactions.title": "Transactions",
@@ -131,6 +147,11 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "transactions.export_csv": "Export CSV",
     "transactions.largest": "Largest",
     "transactions.this_period": "This period",
+    "transactions.transfer_successful": "Transfer Successful",
+    "transactions.payment_successful": "Payment Successful",
+    "transactions.income_recorded": "Income Recorded",
+    "transactions.expense_recorded": "Expense Recorded",
+    "transactions.transaction_successful": "Transaction Successful",
 
     // Transaction Form
     "transaction.details": "Transaction Details",
@@ -168,12 +189,16 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "category.salary": "Salary",
     "category.investment": "Investment",
     "category.other": "Other",
+    "category.transfer": "Transfer",
 
     // Accounts
     "account.checking": "Checking Account",
     "account.savings": "Savings Account",
     "account.credit": "Credit Card",
     "account.cash": "Cash",
+    "accounts.view_account_details": "View account details",
+    "accounts.from": "From",
+    "accounts.to": "To",
 
     // AI Insights
     "ai.title": "AI Insights",
@@ -225,6 +250,66 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "ai.no_expenses": "No expense data available.",
     "ai.analyzing_data": "Analyzing your financial data",
     "ai.please_wait": "Please wait while we generate insights...",
+    "ai.prediction_confidence": "Prediction Confidence",
+    "ai.no_prediction_data": "Not enough data for predictions",
+    "ai.stable": "Stable",
+    "ai.decrease_from_last": "decrease from last month",
+    "ai.recommended_amount": "Recommended amount",
+    "ai.goal_timeline": "Goal timeline",
+    "ai.months": "months",
+    "ai.budget_optimization": "Budget Optimization",
+    "ai.budget_explanation":
+      'You could reduce your spending in "Entertainment" by 15% without significantly affecting your lifestyle, saving approximately €75 per month.',
+    "ai.investment_recommendation": "Recommended Investment",
+    "ai.investment_explanation":
+      "With your current financial profile, you could consider investing €200 monthly in an index fund to build long-term wealth.",
+    "ai.investment_type": "Investment type",
+    "ai.index_fund": "Index fund",
+    "ai.time_horizon": "Time horizon",
+    "ai.long_term": "Long term",
+    "anomaly.additional_income": "Additional Income Detected",
+    "anomaly.income_explanation": "You've received an income of €350 that doesn't match your usual income patterns.",
+    "anomaly.amount": "Amount",
+    "anomaly.unused_subscription": "Unused Subscription",
+    "anomaly.subscription_explanation":
+      "You're paying €12.99 monthly for a service you haven't used in the last 3 months.",
+    "anomaly.monthly_cost": "Monthly cost",
+    "anomaly.last_used": "Last used",
+    "anomaly.months_ago": "months ago",
+    "anomaly.food_explanation": 'Your spending in "Restaurants" this month is 35% higher than your monthly average.',
+    "ai.try_example": "Try an example",
+    "category.main_expense":
+      "Your main expense category is {category}, representing {percentage}% of your total expenses.",
+    "category.expense_increase": "Your expenses in {category} have increased by {percentage}% in the last 3 months.",
+    "category.expense_decrease":
+      "You have reduced your expenses in {category} by {percentage}% in the last 3 months. Good job!",
+    "savings.excellent": "Excellent work! You are saving {percentage}% of your income, which is a healthy rate.",
+    "savings.good":
+      "You are saving {percentage}% of your income. Consider increasing your savings rate to 20% to improve your financial health.",
+    "savings.negative":
+      "Your expenses exceed your income in the last 3 months. Consider reviewing your budget to avoid debt.",
+
+    // Financial Tips
+    "tips.financial_tips": "Financial Tips",
+    "tips.diversify_spending": "Diversify Your Spending",
+    "tips.diversify_spending_desc":
+      "Your {category} category represents a large portion of your expenses. Consider reviewing and diversifying your spending.",
+    "tips.create_budget": "Create a budget",
+    "tips.investment_opportunity": "Investment Opportunity",
+    "tips.investment_opportunity_desc":
+      "With your excellent savings rate, you could consider investing some of your savings for long-term growth.",
+    "tips.explore_investments": "Explore investment options",
+    "tips.emergency_fund": "Build an Emergency Fund",
+    "tips.emergency_fund_desc":
+      "Aim to save 3-6 months of expenses in an easily accessible account for unexpected situations.",
+    "tips.start_saving": "Start saving now",
+    "tips.automate_savings": "Automate Your Savings",
+    "tips.automate_savings_desc":
+      "Set up automatic transfers to your savings account on payday to make saving effortless.",
+    "tips.set_up_auto": "Set up automatic transfers",
+    "tips.reduce_debt": "Reduce High-Interest Debt",
+    "tips.reduce_debt_desc": "Focus on paying off high-interest debt first to save money on interest payments.",
+    "tips.debt_strategy": "Create a debt payoff strategy",
 
     // Settings
     "settings.title": "Settings",
@@ -314,47 +399,6 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "accounts.no_expenses_this_month": "No expenses recorded this month.",
     "accounts.balance": "Balance",
     "accounts.no_data": "No data available",
-
-    "export.export_pdf": "Export PDF",
-    "export.export_summary": "Export Financial Summary",
-    "export.select_sections": "Select the sections you want to include in your PDF report",
-    "export.transactions_section": "Transactions",
-    "export.accounts_section": "Accounts",
-    "export.ai_insights_section": "AI Insights",
-    "export.dashboard_section": "Dashboard Overview",
-    "export.generating": "Generating...",
-    "export.download": "Download PDF",
-    "export.success": "Export Successful",
-    "export.file_ready": "Your PDF file is ready to download",
-    "theme.switch_to_light": "Switch to light mode",
-    "theme.switch_to_dark": "Switch to dark mode",
-    "transactions.transfer_successful": "Transfer Successful",
-    "transactions.payment_successful": "Payment Successful",
-    "transactions.income_recorded": "Income Recorded",
-    "transactions.expense_recorded": "Expense Recorded",
-    "transactions.transaction_successful": "Transaction Successful",
-    "common.close": "Close",
-    "accounts.from": "From",
-    "accounts.to": "To",
-
-    // Dashboard
-    "dashboard.back": "Back",
-    "dashboard.overview": "Overview",
-    "dashboard.categories": "Categories",
-    "dashboard.trends": "Trends",
-    "dashboard.selected_period": "Selected period",
-    "dashboard.net_balance": "Net Balance",
-    "dashboard.balance": "Balance",
-    "dashboard.monthly_comparison": "Monthly comparison",
-    "dashboard.distribution_by_category": "Distribution by category",
-    "dashboard.highest_spending_categories": "Highest spending categories",
-    "dashboard.expense_categories": "Expense Categories",
-    "dashboard.top_expenses": "Top Expenses",
-    "dashboard.spending_trends": "Spending Trends",
-    "dashboard.monthly_spending_evolution": "Monthly spending evolution",
-    "dashboard.expense_ratio": "Expense Ratio",
-
-    // Accounts
     "accounts.back": "Back",
     "accounts.overview": "Overview",
     "accounts.categories": "Categories",
@@ -370,12 +414,25 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "accounts.expense_categories": "Expense Categories",
     "accounts.balance": "Balance",
 
-    // AI Predictions
-    "ai.prediction_confidence": "Prediction Confidence",
-    "ai.high_confidence": "High confidence",
-    "ai.medium_confidence": "Medium confidence",
-    "ai.low_confidence": "Low confidence",
-    "ai.no_prediction_data": "Not enough data for predictions",
+    // Export
+    "export.export_pdf": "Export PDF",
+    "export.export_summary": "Export Financial Summary",
+    "export.select_sections": "Select the sections you want to include in your PDF report",
+    "export.transactions_section": "Transactions",
+    "export.accounts_section": "Accounts",
+    "export.ai_insights_section": "AI Insights",
+    "export.dashboard_section": "Dashboard Overview",
+    "export.generating": "Generating...",
+    "export.download": "Download PDF",
+    "export.success": "Export Successful",
+    "export.file_ready": "Your PDF file is ready to download",
+
+    // Theme
+    "theme.switch_to_light": "Switch to light mode",
+    "theme.switch_to_dark": "Switch to dark mode",
+
+    // Common
+    "common.close": "Close",
   },
   es: {
     // General
@@ -412,6 +469,21 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "dashboard.export_data": "Exportar Datos",
     "dashboard.total_transactions": "Total de transacciones",
     "dashboard.add_new": "Añadir nueva",
+    "dashboard.back": "Volver",
+    "dashboard.overview": "Resumen",
+    "dashboard.categories": "Categorías",
+    "dashboard.trends": "Tendencias",
+    "dashboard.selected_period": "Período seleccionado",
+    "dashboard.net_balance": "Balance Neto",
+    "dashboard.balance": "Balance",
+    "dashboard.monthly_comparison": "Comparación mensual",
+    "dashboard.distribution_by_category": "Distribución por categoría",
+    "dashboard.highest_spending_categories": "Categorías con mayor gasto",
+    "dashboard.expense_categories": "Categorías de Gastos",
+    "dashboard.top_expenses": "Principales Gastos",
+    "dashboard.spending_trends": "Tendencias de Gasto",
+    "dashboard.monthly_spending_evolution": "Evolución mensual de gastos",
+    "dashboard.expense_ratio": "Ratio de Gastos",
 
     // Transactions
     "transactions.title": "Transacciones",
@@ -435,6 +507,11 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "transactions.export_csv": "Exportar CSV",
     "transactions.largest": "Mayor",
     "transactions.this_period": "Este período",
+    "transactions.transfer_successful": "Transferencia Exitosa",
+    "transactions.payment_successful": "Pago Exitoso",
+    "transactions.income_recorded": "Ingreso Registrado",
+    "transactions.expense_recorded": "Gasto Registrado",
+    "transactions.transaction_successful": "Transacción Exitosa",
 
     // Transaction Form
     "transaction.details": "Detalles de la Transacción",
@@ -472,12 +549,16 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "category.salary": "Salario",
     "category.investment": "Inversión",
     "category.other": "Otros",
+    "category.transfer": "Transferencia",
 
     // Accounts
     "account.checking": "Cuenta Corriente",
     "account.savings": "Cuenta de Ahorros",
     "account.credit": "Tarjeta de Crédito",
     "account.cash": "Efectivo",
+    "accounts.view_account_details": "Ver detalles de la cuenta",
+    "accounts.from": "Desde",
+    "accounts.to": "Hacia",
 
     // AI Insights
     "ai.title": "Análisis de IA",
@@ -529,6 +610,69 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "ai.no_expenses": "No hay datos de gastos disponibles.",
     "ai.analyzing_data": "Analizando tus datos financieros",
     "ai.please_wait": "Por favor espera mientras generamos perspectivas...",
+    "ai.prediction_confidence": "Confianza de la Predicción",
+    "ai.no_prediction_data": "No hay suficientes datos para predicciones",
+    "ai.stable": "Estable",
+    "ai.decrease_from_last": "de disminución desde el mes pasado",
+    "ai.recommended_amount": "Cantidad recomendada",
+    "ai.goal_timeline": "Plazo del objetivo",
+    "ai.months": "meses",
+    "ai.budget_optimization": "Optimización de Presupuesto",
+    "ai.budget_explanation":
+      'Podrías reducir tus gastos en "Entretenimiento" en un 15% sin afectar significativamente tu estilo de vida, ahorrando aproximadamente €75 al mes.',
+    "ai.investment_recommendation": "Inversión Recomendada",
+    "ai.investment_explanation":
+      "Con tu perfil financiero actual, podrías considerar invertir €200 mensuales en un fondo indexado para construir un patrimonio a largo plazo.",
+    "ai.investment_type": "Tipo de inversión",
+    "ai.index_fund": "Fondo indexado",
+    "ai.time_horizon": "Horizonte temporal",
+    "ai.long_term": "Largo plazo",
+    "anomaly.additional_income": "Ingreso Adicional Detectado",
+    "anomaly.income_explanation":
+      "Has recibido un ingreso de €350 que no coincide con tus patrones habituales de ingresos.",
+    "anomaly.amount": "Cantidad",
+    "anomaly.unused_subscription": "Suscripción no Utilizada",
+    "anomaly.subscription_explanation":
+      "Estás pagando €12.99 mensuales por un servicio que no has utilizado en los últimos 3 meses.",
+    "anomaly.monthly_cost": "Costo mensual",
+    "anomaly.last_used": "Último uso",
+    "anomaly.months_ago": "meses atrás",
+    "anomaly.food_explanation": 'Tu gasto en "Restaurantes" este mes es un 35% mayor que tu promedio mensual.',
+    "ai.try_example": "Probar un ejemplo",
+    "category.main_expense":
+      "Tu categoría principal de gasto es {category}, representando el {percentage}% de tus gastos totales.",
+    "category.expense_increase": "Tus gastos en {category} han aumentado un {percentage}% en los últimos 3 meses.",
+    "category.expense_decrease":
+      "Has reducido tus gastos en {category} un {percentage}% en los últimos 3 meses. ¡Buen trabajo!",
+    "savings.excellent":
+      "¡Excelente trabajo! Estás ahorrando el {percentage}% de tus ingresos, lo cual es una tasa saludable.",
+    "savings.good":
+      "Estás ahorrando el {percentage}% de tus ingresos. Considera aumentar tu tasa de ahorro al 20% para mejorar tu salud financiera.",
+    "savings.negative":
+      "Tus gastos superan tus ingresos en los últimos 3 meses. Considera revisar tu presupuesto para evitar endeudamiento.",
+
+    // Financial Tips
+    "tips.financial_tips": "Consejos Financieros",
+    "tips.diversify_spending": "Diversifica tus Gastos",
+    "tips.diversify_spending_desc":
+      "Tu categoría de {category} representa una gran parte de tus gastos. Considera revisar y diversificar tus gastos.",
+    "tips.create_budget": "Crear un presupuesto",
+    "tips.investment_opportunity": "Oportunidad de Inversión",
+    "tips.investment_opportunity_desc":
+      "Con tu excelente tasa de ahorro, podrías considerar invertir parte de tus ahorros para un crecimiento a largo plazo.",
+    "tips.explore_investments": "Explorar opciones de inversión",
+    "tips.emergency_fund": "Crea un Fondo de Emergencia",
+    "tips.emergency_fund_desc":
+      "Intenta ahorrar de 3 a 6 meses de gastos en una cuenta de fácil acceso para situaciones inesperadas.",
+    "tips.start_saving": "Comienza a ahorrar ahora",
+    "tips.automate_savings": "Automatiza tus Ahorros",
+    "tips.automate_savings_desc":
+      "Configura transferencias automáticas a tu cuenta de ahorros en el día de pago para hacer que ahorrar sea más fácil.",
+    "tips.set_up_auto": "Configurar transferencias automáticas",
+    "tips.reduce_debt": "Reduce la Deuda de Alto Interés",
+    "tips.reduce_debt_desc":
+      "Concéntrate en pagar primero las deudas con alto interés para ahorrar dinero en pagos de intereses.",
+    "tips.debt_strategy": "Crear una estrategia de pago de deudas",
 
     // Settings
     "settings.title": "Configuración",
@@ -618,47 +762,6 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "accounts.no_expenses_this_month": "No se han registrado gastos este mes.",
     "accounts.balance": "Balance",
     "accounts.no_data": "No hay datos disponibles",
-
-    "export.export_pdf": "Exportar PDF",
-    "export.export_summary": "Exportar Resumen Financiero",
-    "export.select_sections": "Selecciona las secciones que deseas incluir en tu informe PDF",
-    "export.transactions_section": "Transacciones",
-    "export.accounts_section": "Cuentas",
-    "export.ai_insights_section": "Análisis de IA",
-    "export.dashboard_section": "Resumen General",
-    "export.generating": "Generando...",
-    "export.download": "Descargar PDF",
-    "export.success": "Exportación Exitosa",
-    "export.file_ready": "Tu archivo PDF está listo para descargar",
-    "theme.switch_to_light": "Cambiar a modo claro",
-    "theme.switch_to_dark": "Cambiar a modo oscuro",
-    "transactions.transfer_successful": "Transferencia Exitosa",
-    "transactions.payment_successful": "Pago Exitoso",
-    "transactions.income_recorded": "Ingreso Registrado",
-    "transactions.expense_recorded": "Gasto Registrado",
-    "transactions.transaction_successful": "Transacción Exitosa",
-    "common.close": "Cerrar",
-    "accounts.from": "Desde",
-    "accounts.to": "Hacia",
-
-    // Dashboard
-    "dashboard.back": "Volver",
-    "dashboard.overview": "Resumen",
-    "dashboard.categories": "Categorías",
-    "dashboard.trends": "Tendencias",
-    "dashboard.selected_period": "Período seleccionado",
-    "dashboard.net_balance": "Balance Neto",
-    "dashboard.balance": "Balance",
-    "dashboard.monthly_comparison": "Comparación mensual",
-    "dashboard.distribution_by_category": "Distribución por categoría",
-    "dashboard.highest_spending_categories": "Categorías con mayor gasto",
-    "dashboard.expense_categories": "Categorías de Gastos",
-    "dashboard.top_expenses": "Principales Gastos",
-    "dashboard.spending_trends": "Tendencias de Gasto",
-    "dashboard.monthly_spending_evolution": "Evolución mensual de gastos",
-    "dashboard.expense_ratio": "Ratio de Gastos",
-
-    // Accounts
     "accounts.back": "Volver",
     "accounts.overview": "Resumen",
     "accounts.categories": "Categorías",
@@ -674,12 +777,25 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "accounts.expense_categories": "Categorías de Gastos",
     "accounts.balance": "Balance",
 
-    // AI Predictions
-    "ai.prediction_confidence": "Confianza de la Predicción",
-    "ai.high_confidence": "Alta confianza",
-    "ai.medium_confidence": "Confianza media",
-    "ai.low_confidence": "Baja confianza",
-    "ai.no_prediction_data": "No hay suficientes datos para predicciones",
+    // Export
+    "export.export_pdf": "Exportar PDF",
+    "export.export_summary": "Exportar Resumen Financiero",
+    "export.select_sections": "Selecciona las secciones que deseas incluir en tu informe PDF",
+    "export.transactions_section": "Transacciones",
+    "export.accounts_section": "Cuentas",
+    "export.ai_insights_section": "Análisis de IA",
+    "export.dashboard_section": "Resumen General",
+    "export.generating": "Generando...",
+    "export.download": "Descargar PDF",
+    "export.success": "Exportación Exitosa",
+    "export.file_ready": "Tu archivo PDF está listo para descargar",
+
+    // Theme
+    "theme.switch_to_light": "Cambiar a modo claro",
+    "theme.switch_to_dark": "Cambiar a modo oscuro",
+
+    // Common
+    "common.close": "Cerrar",
   },
 }
 
@@ -745,6 +861,17 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }).format(convertedAmount)
   }
 
+  // Formatear fecha
+  const formatDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }
+
+    return new Intl.DateTimeFormat(settings.language === "en" ? "en-US" : "es-ES", options).format(date)
+  }
+
   // Traducir texto
   const translate = (key: string) => {
     return translations[key] || key
@@ -754,6 +881,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     settings,
     updateSettings,
     formatCurrency,
+    formatDate,
     translate,
     translations,
   }

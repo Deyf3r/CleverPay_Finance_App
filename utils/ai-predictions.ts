@@ -943,21 +943,16 @@ export function generateFinancialInsights(transactions: Transaction[]): {
   // Insight sobre distribución de gastos
   if (topExpenseCategories.length > 0) {
     const topCategory = topExpenseCategories[0]
-    insights.push(
-      `Tu categoría principal de gasto es ${topCategory.category}, representando el ${topCategory.percentage.toFixed(1)}% de tus gastos totales.`,
-    )
+    // Nota: Estos insights se traducirán en el componente AIInsights
+    insights.push(`insight.top_category|${topCategory.category}|${topCategory.percentage.toFixed(1)}`)
   }
 
   // Insights sobre tendencias
   spendingTrends.slice(0, 3).forEach((trend) => {
     if (trend.trend === "increasing") {
-      insights.push(
-        `Tus gastos en ${trend.category} han aumentado un ${trend.percentage.toFixed(1)}% en los últimos 3 meses.`,
-      )
+      insights.push(`insight.increasing_trend|${trend.category}|${trend.percentage.toFixed(1)}`)
     } else if (trend.trend === "decreasing") {
-      insights.push(
-        `Has reducido tus gastos en ${trend.category} un ${trend.percentage.toFixed(1)}% en los últimos 3 meses. ¡Buen trabajo!`,
-      )
+      insights.push(`insight.decreasing_trend|${trend.category}|${trend.percentage.toFixed(1)}`)
     }
   })
 
@@ -968,17 +963,11 @@ export function generateFinancialInsights(transactions: Transaction[]): {
     const savingsRate = ((recentIncome - totalRecentExpenses) / recentIncome) * 100
 
     if (savingsRate > 20) {
-      insights.push(
-        `¡Excelente trabajo! Estás ahorrando el ${savingsRate.toFixed(1)}% de tus ingresos, lo cual es una tasa saludable.`,
-      )
+      insights.push(`insight.excellent_savings|${savingsRate.toFixed(1)}`)
     } else if (savingsRate > 0) {
-      insights.push(
-        `Estás ahorrando el ${savingsRate.toFixed(1)}% de tus ingresos. Considera aumentar tu tasa de ahorro al 20% para mejorar tu salud financiera.`,
-      )
+      insights.push(`insight.good_savings|${savingsRate.toFixed(1)}`)
     } else {
-      insights.push(
-        `Tus gastos superan tus ingresos en los últimos 3 meses. Considera revisar tu presupuesto para evitar endeudamiento.`,
-      )
+      insights.push(`insight.negative_savings`)
     }
   }
 

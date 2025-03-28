@@ -14,9 +14,10 @@ interface AccountSummaryProps {
 export function AccountSummary({ accountType }: AccountSummaryProps) {
   const { state } = useFinance()
   const { formatCurrency, translate } = useSettings()
+  const { transactions } = state
 
   // Obtener transacciones de la cuenta
-  const accountTransactions = state.transactions.filter((t) => t.account === accountType)
+  const accountTransactions = transactions.filter((t) => t.account === accountType)
 
   // Obtener fecha actual y mes anterior
   const currentDate = new Date()
@@ -95,7 +96,7 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{translate("accounts.monthly_comparison")}</CardTitle>
+            <CardTitle className="text-sm font-medium">Monthly Comparison</CardTitle>
             <CardDescription>
               {format(currentMonth, "MMMM yyyy")} vs {format(lastMonth, "MMMM yyyy")}
             </CardDescription>
@@ -103,7 +104,7 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">{translate("accounts.income")}</span>
+                <span className="text-sm text-muted-foreground">Income</span>
                 <div className="flex items-center">
                   <span className="font-medium text-emerald-500 dark:text-emerald-400">
                     {formatCurrency(currentMonthIncome)}
@@ -125,7 +126,7 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
 
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">{translate("accounts.expenses")}</span>
+                <span className="text-sm text-muted-foreground">Expenses</span>
                 <div className="flex items-center">
                   <span className="font-medium text-rose-500 dark:text-rose-400">
                     {formatCurrency(currentMonthExpenses)}
@@ -147,7 +148,7 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
 
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">{translate("accounts.net_flow")}</span>
+                <span className="text-sm text-muted-foreground">Net Flow</span>
                 <span
                   className={`font-medium ${
                     currentMonthIncome - currentMonthExpenses > 0
@@ -168,7 +169,7 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
 
         <Card className="card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{translate("accounts.expense_categories")}</CardTitle>
+            <CardTitle className="text-sm font-medium">Expense Categories</CardTitle>
             <CardDescription>{format(currentMonth, "MMMM yyyy")}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -196,7 +197,7 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
               </div>
             ) : (
               <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                {translate("accounts.no_expenses_this_month")}
+                No expenses this month
               </div>
             )}
           </CardContent>
@@ -205,7 +206,7 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
 
       <Card className="card">
         <CardHeader>
-          <CardTitle className="text-sm font-medium">{translate("accounts.top_expenses")}</CardTitle>
+          <CardTitle className="text-sm font-medium">Top Expenses</CardTitle>
           <CardDescription>{format(currentMonth, "MMMM yyyy")}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -232,9 +233,7 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
             ))}
 
             {categoryData.length === 0 && (
-              <div className="text-center py-4 text-muted-foreground">
-                {translate("accounts.no_expenses_this_month")}
-              </div>
+              <div className="text-center py-4 text-muted-foreground">No expenses this month</div>
             )}
           </div>
         </CardContent>

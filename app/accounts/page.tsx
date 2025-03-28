@@ -1,5 +1,7 @@
 "use client"
 
+import { DialogTrigger } from "@/components/ui/dialog"
+
 import { useState } from "react"
 import { useFinance } from "@/context/finance-context"
 import { useSettings } from "@/context/settings-context"
@@ -14,7 +16,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,6 +24,7 @@ import { AccountChart } from "@/components/account-chart"
 import { AccountTransactions } from "@/components/account-transactions"
 import { AccountSummary } from "@/components/account-summary"
 import { TransferFunds } from "@/components/transfer-funds"
+import { AddAccountDialog } from "@/components/add-account-dialog"
 import {
   CreditCard,
   Wallet,
@@ -30,7 +32,6 @@ import {
   PiggyBank,
   ArrowUpRight,
   ArrowDownRight,
-  Plus,
   Pencil,
   RefreshCw,
   BarChart4,
@@ -45,6 +46,12 @@ export default function AccountsPage() {
   const [newAccountName, setNewAccountName] = useState("")
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false)
   const [showDetailedView, setShowDetailedView] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  // Function to refresh the page data
+  const refreshData = () => {
+    setRefreshTrigger((prev) => prev + 1)
+  }
 
   // Función para obtener el icono de la cuenta
   const getAccountIcon = (accountType: string) => {
@@ -94,8 +101,8 @@ export default function AccountsPage() {
   const handleRenameAccount = () => {
     if (!newAccountName.trim()) {
       toast({
-        title: translate("alert.error"),
-        description: translate("accounts.enter_name"),
+        title: "Error",
+        description: "Please enter an account name",
         variant: "destructive",
       })
       return
@@ -103,8 +110,8 @@ export default function AccountsPage() {
 
     // Aquí iría la lógica para actualizar el nombre de la cuenta
     toast({
-      title: translate("alert.success"),
-      description: translate("accounts.renamed"),
+      title: "Success",
+      description: "Account renamed successfully",
     })
     setIsRenameDialogOpen(false)
   }
@@ -115,27 +122,30 @@ export default function AccountsPage() {
       <NavBar />
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight">{translate("accounts.title")}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Accounts</h2>
           <div className="flex items-center gap-2">
             <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  {translate("accounts.transfer")}
+                  Transfer Funds
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{translate("accounts.transfer_funds")}</DialogTitle>
-                  <DialogDescription>{translate("accounts.transfer_description")}</DialogDescription>
+                  <DialogTitle>Transfer Funds</DialogTitle>
+                  <DialogDescription>Move money between your accounts</DialogDescription>
                 </DialogHeader>
-                <TransferFunds onComplete={() => setIsTransferDialogOpen(false)} />
+                <TransferFunds
+                  onComplete={() => {
+                    setIsTransferDialogOpen(false)
+                    refreshData()
+                  }}
+                />
               </DialogContent>
             </Dialog>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              {translate("accounts.add_account")}
-            </Button>
+
+            <AddAccountDialog onAccountAdded={refreshData} />
           </div>
         </div>
 
@@ -147,7 +157,7 @@ export default function AccountsPage() {
               {Object.entries(state.accounts).map(([accountType, account]) => (
                 <Card
                   key={accountType}
-                  className={`card overflow-hidden ${activeAccount === accountType ? "ring-2 ring-primary" : ""}`}
+                  className={`card overflow-hidden ${activeAccount === accountType ? "ring-2 ring-primary" : ""} cursor-pointer hover:bg-accent/50 transition-colors`}
                   onClick={() => setActiveAccount(accountType)}
                 >
                   <div className={`h-2 w-full ${getAccountColor(accountType)}`} />
@@ -160,7 +170,16 @@ export default function AccountsPage() {
                       </div>
                       <CardTitle className="text-sm font-medium">{translate(`account.${accountType}`)}</CardTitle>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setNewAccountName(account.name)
+                        setIsRenameDialogOpen(true)
+                      }}
+                    >
                       <Pencil className="h-3 w-3" />
                     </Button>
                   </CardHeader>
@@ -199,46 +218,46 @@ export default function AccountsPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <Card className="card md:col-span-2">
                 <CardHeader>
-                  <CardTitle>{translate("accounts.account_activity")}</CardTitle>
-                  <CardDescription>{translate("accounts.activity_description")}</CardDescription>
+                  <CardTitle>Account Activity</CardTitle>
+                  <CardDescription>Income, expenses and balance over time</CardDescription>
                 </CardHeader>
                 <CardContent className="px-2">
-                  <AccountChart accountType={activeAccount} />
+                  <AccountChart accountType={activeAccount} key={`chart-${activeAccount}-${refreshTrigger}`} />
                 </CardContent>
               </Card>
 
               <Card className="card">
                 <CardHeader>
-                  <CardTitle>{translate("accounts.account_stats")}</CardTitle>
-                  <CardDescription>{translate("accounts.stats_description")}</CardDescription>
+                  <CardTitle>Account Stats</CardTitle>
+                  <CardDescription>Summary of account activity</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">{translate("accounts.total_income")}</span>
+                      <span className="text-sm text-muted-foreground">Total Income</span>
                       <span className="font-medium text-emerald-500 dark:text-emerald-400">
                         {formatCurrency(totalIncome)}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">{translate("accounts.total_expenses")}</span>
+                      <span className="text-sm text-muted-foreground">Total Expenses</span>
                       <span className="font-medium text-rose-500 dark:text-rose-400">
                         {formatCurrency(totalExpenses)}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">{translate("accounts.average_income")}</span>
+                      <span className="text-sm text-muted-foreground">Average Income</span>
                       <span className="font-medium">{formatCurrency(averageIncome)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">{translate("accounts.average_expense")}</span>
+                      <span className="text-sm text-muted-foreground">Average Expense</span>
                       <span className="font-medium">{formatCurrency(averageExpense)}</span>
                     </div>
                   </div>
 
                   <div className="pt-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{translate("accounts.transaction_count")}</span>
+                      <span className="text-sm font-medium">Transaction Count</span>
                       <span className="text-sm font-medium">{activeAccountTransactions.length}</span>
                     </div>
                     <div className="mt-2 h-2 w-full rounded-full bg-muted">
@@ -250,12 +269,8 @@ export default function AccountsPage() {
                       />
                     </div>
                     <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                      <span>
-                        {translate("accounts.income")}: {incomeTransactions.length}
-                      </span>
-                      <span>
-                        {translate("accounts.expenses")}: {expenseTransactions.length}
-                      </span>
+                      <span>Income: {incomeTransactions.length}</span>
+                      <span>Expenses: {expenseTransactions.length}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -266,7 +281,7 @@ export default function AccountsPage() {
                     onClick={() => setShowDetailedView(true)}
                   >
                     <BarChart4 className="mr-2 h-4 w-4" />
-                    {translate("accounts.detailed_analytics")}
+                    Detailed Analytics
                   </Button>
                 </CardFooter>
               </Card>
@@ -274,28 +289,31 @@ export default function AccountsPage() {
 
             <Tabs defaultValue="transactions" className="space-y-4">
               <TabsList>
-                <TabsTrigger value="transactions">{translate("accounts.recent_transactions")}</TabsTrigger>
-                <TabsTrigger value="summary">{translate("accounts.account_summary")}</TabsTrigger>
+                <TabsTrigger value="transactions">Recent Transactions</TabsTrigger>
+                <TabsTrigger value="summary">Account Summary</TabsTrigger>
               </TabsList>
               <TabsContent value="transactions" className="space-y-4">
                 <Card className="card">
                   <CardHeader>
-                    <CardTitle>{translate("accounts.recent_transactions")}</CardTitle>
-                    <CardDescription>{translate("accounts.recent_transactions_description")}</CardDescription>
+                    <CardTitle>Recent Transactions</CardTitle>
+                    <CardDescription>View and filter your recent account activity</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <AccountTransactions accountType={activeAccount} />
+                    <AccountTransactions
+                      accountType={activeAccount}
+                      key={`transactions-${activeAccount}-${refreshTrigger}`}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
               <TabsContent value="summary" className="space-y-4">
                 <Card className="card">
                   <CardHeader>
-                    <CardTitle>{translate("accounts.account_summary")}</CardTitle>
-                    <CardDescription>{translate("accounts.summary_description")}</CardDescription>
+                    <CardTitle>Account Summary</CardTitle>
+                    <CardDescription>Monthly breakdown of your account activity</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <AccountSummary accountType={activeAccount} />
+                    <AccountSummary accountType={activeAccount} key={`summary-${activeAccount}-${refreshTrigger}`} />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -307,15 +325,15 @@ export default function AccountsPage() {
         <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{translate("accounts.rename_account")}</DialogTitle>
-              <DialogDescription>{translate("accounts.rename_description")}</DialogDescription>
+              <DialogTitle>Rename Account</DialogTitle>
+              <DialogDescription>Enter a new name for this account</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="name">{translate("accounts.account_name")}</Label>
+                <Label htmlFor="name">Account Name</Label>
                 <Input
                   id="name"
-                  placeholder={translate("accounts.account_name_placeholder")}
+                  placeholder="e.g. My Checking Account"
                   value={newAccountName}
                   onChange={(e) => setNewAccountName(e.target.value)}
                 />
@@ -323,9 +341,9 @@ export default function AccountsPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsRenameDialogOpen(false)}>
-                {translate("accounts.cancel")}
+                Cancel
               </Button>
-              <Button onClick={handleRenameAccount}>{translate("accounts.save")}</Button>
+              <Button onClick={handleRenameAccount}>Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

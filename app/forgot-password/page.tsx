@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { WalletIcon, Loader2, AlertCircle, CheckCircle } from "lucide-react"
+import { Loader2, AlertCircle, CheckCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CleverPayLogo } from "@/components/cleverpay-logo"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -63,11 +64,11 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-md dark:border-border/20 elevated-surface">
+    <div className="flex min-h-screen items-center justify-center auth-background p-4">
+      <Card className="w-full max-w-md glass-card shine-effect">
         <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-2">
-            <WalletIcon className="h-10 w-10 text-primary" />
+          <div className="flex flex-col items-center space-y-2 mb-6">
+            <CleverPayLogo size="lg" centered />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Recuperar contraseña</CardTitle>
           <CardDescription className="text-center">
@@ -99,14 +100,10 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="dark:bg-muted/10 dark:border-border/30"
+                className="premium-input"
               />
             </div>
-            <Button
-              type="submit"
-              className="w-full dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full premium-button" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

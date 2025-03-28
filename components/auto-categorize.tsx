@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -8,25 +8,41 @@ import { categorizeTranasction } from "@/utils/ai-predictions"
 import { TagIcon, CheckCircleIcon, AlertCircleIcon } from "lucide-react"
 import { useSettings } from "@/context/settings-context"
 import { Badge } from "@/components/ui/badge"
+import type { TransactionCategory } from "@/types/finance"
 
 export default function AutoCategorize() {
   const { translate } = useSettings()
   const [description, setDescription] = useState("")
   const [result, setResult] = useState<{
-    category: string
+    category: TransactionCategory
     confidence: number
-    alternativeCategories: { category: string; confidence: number }[]
+    alternativeCategories: { category: TransactionCategory; confidence: number }[]
   } | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [examples, setExamples] = useState<string[]>([
+    "Grocery shopping at Walmart",
+    "Monthly Netflix subscription",
+    "Uber ride to airport",
+    "Salary deposit from Company XYZ",
+    "Restaurant dinner with friends",
+  ])
 
-  const handleCategorize = () => {
-    if (!description.trim()) return
+  // Función para sugerir ejemplos aleatorios
+  const getRandomExample = () => {
+    const randomIndex = Math.floor(Math.random() * examples.length)
+    setDescription(examples[randomIndex])
+    handleCategorize(examples[randomIndex])
+  }
+
+  const handleCategorize = (text?: string) => {
+    const descriptionToUse = text || description
+    if (!descriptionToUse.trim()) return
 
     setIsProcessing(true)
 
     // Simular un pequeño retraso para dar la sensación de procesamiento
     setTimeout(() => {
-      const prediction = categorizeTranasction(description)
+      const prediction = categorizeTranasction(descriptionToUse)
       setResult(prediction)
       setIsProcessing(false)
     }, 800)
@@ -55,6 +71,13 @@ export default function AutoCategorize() {
     return `${translate("ai.low_confidence")} (${percentage}%)`
   }
 
+  // Sugerir un ejemplo aleatorio al cargar el componente
+  useEffect(() => {
+    if (!description) {
+      getRandomExample()
+    }
+  }, [])
+
   return (
     <Card className="card">
       <CardHeader>
@@ -70,6 +93,11 @@ export default function AutoCategorize() {
               onChange={(e) => setDescription(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCategorize()}
             />
+            <div className="flex justify-end">
+              <Button variant="link" size="sm" className="text-xs text-muted-foreground" onClick={getRandomExample}>
+                {translate("ai.try_example")}
+              </Button>
+            </div>
           </div>
 
           {result && (
@@ -116,7 +144,7 @@ export default function AutoCategorize() {
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={handleCategorize} disabled={!description.trim() || isProcessing} className="w-full">
+        <Button onClick={() => handleCategorize()} disabled={!description.trim() || isProcessing} className="w-full">
           {isProcessing ? (
             <>
               <span className="animate-pulse mr-2">●</span>

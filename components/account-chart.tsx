@@ -63,24 +63,40 @@ export function AccountChart({ accountType }: AccountChartProps) {
   // Calcular datos mensuales
   let runningBalance = initialBalance
 
-  accountTransactions
+  // Sort transactions by date
+  const sortedTransactions = [...accountTransactions]
     .filter((t) => parseISO(t.date) >= sixMonthsAgo)
     .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
-    .forEach((transaction) => {
-      const date = parseISO(transaction.date)
-      const month = format(date, "MMM yyyy")
 
-      if (monthlyData[month]) {
+  // Process transactions month by month
+  months.forEach((monthKey, index) => {
+    // If this is not the first month, carry over the previous month's balance
+    if (index > 0) {
+      const prevMonth = months[index - 1]
+      runningBalance = monthlyData[prevMonth].balance
+    }
+
+    // Process all transactions for this month
+    const monthStart = parseISO(monthKey)
+    const monthEnd = index < months.length - 1 ? parseISO(months[index + 1]) : new Date() // Use current date for the last month
+
+    sortedTransactions
+      .filter((t) => {
+        const date = parseISO(t.date)
+        return date >= monthStart && date < monthEnd
+      })
+      .forEach((transaction) => {
         if (transaction.type === "income") {
-          monthlyData[month].income += transaction.amount
+          monthlyData[monthKey].income += transaction.amount
           runningBalance += transaction.amount
         } else {
-          monthlyData[month].expenses += transaction.amount
+          monthlyData[monthKey].expenses += transaction.amount
           runningBalance -= transaction.amount
         }
-        monthlyData[month].balance = runningBalance
-      }
-    })
+      })
+
+    monthlyData[monthKey].balance = runningBalance
+  })
 
   // Preparar datos para el gráfico
   const chartData = months.map((month) => ({
@@ -122,7 +138,7 @@ export function AccountChart({ accountType }: AccountChartProps) {
     return (
       <div className="h-[300px] w-full bg-muted/20 flex flex-col items-center justify-center rounded-md">
         <BarChart3Icon className="h-16 w-16 text-muted mb-2" />
-        <span className="text-muted-foreground">{translate("accounts.no_data")}</span>
+        <span className="text-muted-foreground">No transaction data available</span>
       </div>
     )
   }

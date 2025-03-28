@@ -104,6 +104,26 @@ export function deleteTransaction(id: string): boolean {
   return true
 }
 
+// Añadir una cuenta
+export function addAccount(accountData: { type: AccountType; name: string; initialBalance: number }): boolean {
+  const data = loadData()
+
+  // Verificar si la cuenta ya existe
+  if (data.accounts[accountData.type]) {
+    // Si queremos permitir múltiples cuentas del mismo tipo, necesitaríamos cambiar la estructura de datos
+    throw new Error(`Ya existe una cuenta de tipo ${accountData.type}`)
+  }
+
+  // Añadir la nueva cuenta
+  data.accounts[accountData.type] = {
+    balance: accountData.initialBalance,
+    name: accountData.name,
+  }
+
+  saveData(data)
+  return true
+}
+
 // Obtener todas las transacciones
 export function getTransactions(): Transaction[] {
   const data = loadData()

@@ -1,5 +1,10 @@
+// Tipos de transacciones
 export type TransactionType = "income" | "expense"
 
+// Tipos de cuentas
+export type AccountType = "checking" | "savings" | "credit" | "cash"
+
+// Categorías de transacciones
 export type TransactionCategory =
   | "food"
   | "transportation"
@@ -7,43 +12,38 @@ export type TransactionCategory =
   | "utilities"
   | "entertainment"
   | "health"
-  | "shopping"
-  | "personal"
   | "education"
+  | "shopping"
   | "travel"
   | "salary"
   | "investment"
   | "other"
 
-export type AccountType = "checking" | "savings" | "credit" | "cash"
-
+// Estructura de una transacción
 export interface Transaction {
   id: string
   type: TransactionType
   amount: number
   description: string
   category: TransactionCategory
-  date: string // ISO string
+  date: string
   account: AccountType
-  notes?: string
 }
 
+// Estructura del estado de finanzas
 export interface FinanceState {
   transactions: Transaction[]
-  accounts: {
-    [key in AccountType]: {
-      balance: number
-      name: string
-    }
-  }
+  accounts: Record<AccountType, { balance: number; name: string }>
 }
 
+// Tipo para el contexto de finanzas
 export interface FinanceContextType {
   state: FinanceState
-  addTransaction: (transaction: Omit<Transaction, "id">) => void
-  editTransaction: (id: string, transaction: Omit<Transaction, "id">) => void
-  deleteTransaction: (id: string) => void
+  addTransaction: (transaction: Omit<Transaction, "id">) => Transaction
+  editTransaction: (id: string, transaction: Omit<Transaction, "id">) => Transaction | null
+  deleteTransaction: (id: string) => boolean
   getTransactionById: (id: string) => Transaction | undefined
+  addAccount: (accountData: { type: AccountType; name: string; initialBalance: number }) => boolean
   getFilteredTransactions: (type?: TransactionType, month?: string) => Transaction[]
   getTotalBalance: () => number
   getTotalIncome: () => number

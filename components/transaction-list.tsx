@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
-import { Edit2Icon, Trash2Icon, ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { Edit2Icon, Trash2Icon, ArrowUpRight, ArrowDownRight, ExternalLinkIcon } from "lucide-react"
 
 import { useFinance } from "@/context/finance-context"
 import { useSettings } from "@/context/settings-context"
@@ -21,18 +21,43 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface TransactionListProps {
   type?: TransactionType
   month?: string
+  accountFilter?: string
+  limit?: number
+  showViewAll?: boolean
 }
 
-export default function TransactionList({ type, month }: TransactionListProps) {
-  const { getFilteredTransactions, deleteTransaction } = useFinance()
+export default function TransactionList({
+  type,
+  month,
+  accountFilter,
+  limit,
+  showViewAll = false,
+}: TransactionListProps) {
+  const { getFilteredTransactions, deleteTransaction, state } = useFinance()
   const { formatCurrency, translate } = useSettings()
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
 
-  const transactions = getFilteredTransactions(type, month)
+  useEffect(() => {
+    let filteredTransactions = getFilteredTransactions(type, month)
+
+    // Aplicar filtro de cuenta si se proporciona
+    if (accountFilter) {
+      filteredTransactions = filteredTransactions.filter((t) => t.account === accountFilter)
+    }
+
+    // Aplicar límite si se proporciona
+    if (limit && limit > 0) {
+      filteredTransactions = filteredTransactions.slice(0, limit)
+    }
+
+    setTransactions(filteredTransactions)
+  }, [getFilteredTransactions, type, month, accountFilter, limit, state.transactions])
 
   const handleDelete = (id: string) => {
     deleteTransaction(id)
@@ -79,9 +104,23 @@ export default function TransactionList({ type, month }: TransactionListProps) {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className="font-normal dark:bg-muted/10">
-                    {translate(`account.${transaction.account}`)}
-                  </Badge>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link href={`/accounts?account=${transaction.account}`}>
+                          <Badge
+                            variant="secondary"
+                            className="font-normal dark:bg-muted/10 cursor-pointer hover:bg-muted/20 transition-colors"
+                          >
+                            {translate(`account.${transaction.account}`)}
+                          </Badge>
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{translate("accounts.view_account_details")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end">
@@ -126,6 +165,17 @@ export default function TransactionList({ type, month }: TransactionListProps) {
           </TableBody>
         </Table>
       </div>
+
+      {showViewAll && transactions.length > 0 && (
+        <div className="mt-4 flex justify-center">
+          <Button variant="outline" asChild className="w-full sm:w-auto">
+            <Link href="/transactions" className="flex items-center justify-center gap-2">
+              {translate("dashboard.view_all")}
+              <ExternalLinkIcon className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      )}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent className="dark:bg-card dark:border-border/20">

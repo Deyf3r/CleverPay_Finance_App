@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
-import type { FinanceState, FinanceContextType, Transaction, TransactionType } from "@/types/finance"
+import type { FinanceState, FinanceContextType, Transaction, TransactionType, AccountType } from "@/types/finance"
 import { format, parseISO } from "date-fns"
 import * as storage from "@/lib/storage"
 
@@ -54,6 +54,116 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Get a transaction by ID
   const getTransactionById = (id: string) => {
     return storage.getTransactionById(id)
+  }
+
+  // Add a new account
+  const addAccount = async (accountData: { type: AccountType; name: string; initialBalance: number }) => {
+    // Add validation
+    if (!accountData.type) {
+      throw new Error("Account type is required")
+    }
+
+    if (!accountData.name.trim()) {
+      throw new Error("Account name is required")
+    }
+
+    if (isNaN(accountData.initialBalance)) {
+      throw new Error("Initial balance must be a valid number")
+    }
+
+    // Check if account type already exists
+    if (state.accounts[accountData.type]) {
+      throw new Error(`An account of type ${accountData.type} already exists`)
+    }
+
+    // Simulate async operation
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const result = storage.addAccount(accountData)
+    setState(storage.loadData())
+    return result
+  }
+
+  // Rename an account
+  const renameAccount = async (accountType: AccountType, newName: string) => {
+    if (!newName.trim()) {
+      throw new Error("Account name is required")
+    }
+
+    // Simulate async operation
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const updatedAccounts = { ...state.accounts }
+    if (updatedAccounts[accountType]) {
+      updatedAccounts[accountType] = {
+        ...updatedAccounts[accountType],
+        name: newName,
+      }
+
+      const updatedState = {
+        ...state,
+        accounts: updatedAccounts,
+      }
+
+      storage.saveData(updatedState)
+      setState(updatedState)
+      return true
+    }
+
+    throw new Error("Account not found")
+  }
+
+  // Transfer funds between accounts
+  const transferFunds = async (fromAccount: AccountType, toAccount: AccountType, amount: number) => {
+    if (fromAccount === toAccount) {
+      throw new Error("Cannot transfer to the same account")
+    }
+
+    if (amount <= 0) {
+      throw new Error("Transfer amount must be greater than zero")
+    }
+
+    if (!state.accounts[fromAccount]) {
+      throw new Error("Source account not found")
+    }
+
+    if (!state.accounts[toAccount]) {
+      throw new Error("Destination account not found")
+    }
+
+    if (state.accounts[fromAccount].balance < amount) {
+      throw new Error("Insufficient funds in source account")
+    }
+
+    // Simulate async operation
+    await new Promise((resolve) => setTimeout(resolve, 800))
+
+    // Create withdrawal transaction
+    const withdrawalTransaction: Omit<Transaction, "id"> = {
+      type: "expense",
+      amount,
+      description: `Transfer to ${state.accounts[toAccount].name}`,
+      category: "transfer",
+      date: new Date().toISOString(),
+      account: fromAccount,
+    }
+
+    // Create deposit transaction
+    const depositTransaction: Omit<Transaction, "id"> = {
+      type: "income",
+      amount,
+      description: `Transfer from ${state.accounts[fromAccount].name}`,
+      category: "transfer",
+      date: new Date().toISOString(),
+      account: toAccount,
+    }
+
+    // Add both transactions
+    storage.addTransaction(withdrawalTransaction)
+    storage.addTransaction(depositTransaction)
+
+    setState(storage.loadData())
+    return true
   }
 
   // Get filtered transactions by type and/or month
@@ -136,6 +246,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     editTransaction,
     deleteTransaction,
     getTransactionById,
+    addAccount,
+    renameAccount,
+    transferFunds,
     getFilteredTransactions,
     getTotalBalance,
     getTotalIncome,

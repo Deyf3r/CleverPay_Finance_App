@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import {
-  WalletIcon,
   BrainCircuitIcon,
   Settings,
   LayoutDashboard,
@@ -23,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/context/auth-context"
 import { UserAvatar } from "@/components/user-avatar"
+import { CleverPayLogo } from "@/components/cleverpay-logo"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,12 +46,9 @@ export default function NavBar() {
   }
 
   return (
-    <div className="border-b dark:border-border/20 dark:bg-card">
-      <div className="flex h-16 items-center px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <WalletIcon className="h-6 w-6" />
-          <span>{translate("app.name")}</span>
-        </Link>
+    <div className="premium-navbar sticky top-0 z-50">
+      <div className="flex h-16 items-center px-4 md:px-6">
+        <CleverPayLogo size="md" />
 
         {/* Menú móvil */}
         <div className="md:hidden ml-auto flex items-center gap-2">
@@ -71,7 +68,10 @@ export default function NavBar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="dark:bg-card">
-              <nav className="flex flex-col gap-4 mt-8">
+              <div className="flex justify-center mb-8 mt-4">
+                <CleverPayLogo size="lg" />
+              </div>
+              <nav className="flex flex-col gap-4">
                 <Link
                   href="/"
                   className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/20 text-muted-foreground hover:text-primary"
@@ -146,38 +146,38 @@ export default function NavBar() {
         </div>
 
         {/* Menú de escritorio */}
-        <nav className="ml-auto hidden md:flex gap-4 sm:gap-6 items-center">
+        <nav className="ml-auto hidden md:flex gap-6 items-center">
           <Link
             href="/"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
+            className="nav-link text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
           >
             <LayoutDashboard className="h-4 w-4" />
             {translate("nav.overview")}
           </Link>
           <Link
             href="/transactions"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
+            className="nav-link text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
           >
             <Receipt className="h-4 w-4" />
             {translate("nav.transactions")}
           </Link>
           <Link
             href="/ai-insights"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
+            className="nav-link text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
           >
             <BrainCircuitIcon className="h-4 w-4" />
             {translate("nav.ai_insights")}
           </Link>
           <Link
             href="/accounts"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
+            className="nav-link text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
           >
             <CreditCard className="h-4 w-4" />
             {translate("nav.accounts")}
           </Link>
           <Link
             href="/settings"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
+            className="nav-link text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1.5"
           >
             <Settings className="h-4 w-4" />
             {translate("nav.settings")}
@@ -256,7 +256,7 @@ export default function NavBar() {
               </DropdownMenu>
             </div>
           ) : (
-            <Button asChild variant="outline" size="sm" className="ml-2">
+            <Button asChild className="premium-button ml-2">
               <Link href="/login">
                 <User className="mr-2 h-4 w-4" />
                 Iniciar sesión

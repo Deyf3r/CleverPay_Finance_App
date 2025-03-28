@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Removed the problematic import: @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap'); */
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -13,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 160 84% 39%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -30,13 +32,13 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 160 84% 39%;
 
     --radius: 0.5rem;
   }
 
   .dark {
-    /* Mejoramos los colores del modo oscuro para un aspecto más premium */
+    /* Colores premium para el modo oscuro */
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
@@ -46,7 +48,7 @@
     --popover: 222 47% 13%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 160 84% 39%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17%;
@@ -63,7 +65,7 @@
 
     --border: 217.2 32.6% 17%;
     --input: 217.2 32.6% 17%;
-    --ring: 224.3 76.3% 60%;
+    --ring: 160 84% 39%;
   }
 }
 
@@ -273,5 +275,296 @@
 
 .bounce-in {
   animation: bounceIn 0.75s;
+}
+
+/* Estilos mejorados para CleverPay */
+
+/* Logo y branding - Versión mejorada */
+.cleverpay-logo-container {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f766e 0%, #0c4a6e 100%);
+  box-shadow: 0 4px 12px rgba(10, 207, 131, 0.25);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateZ(0); /* Para mejorar el rendimiento */
+}
+
+.cleverpay-logo-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 60%);
+  z-index: 1;
+}
+
+.cleverpay-logo-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(10, 207, 131, 0.35);
+}
+
+.cleverpay-logo-image {
+  position: relative !important;
+  object-fit: contain;
+  padding: 4px;
+  z-index: 2;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.cleverpay-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cleverpay-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.cleverpay-name {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  position: relative;
+  line-height: 1.2;
+}
+
+.cleverpay-name::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #10b981 0%, transparent 100%);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.cleverpay-brand:hover .cleverpay-name::after {
+  transform: scaleX(1);
+}
+
+.cleverpay-slogan {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #64748b;
+  letter-spacing: 0.02em;
+  margin-top: -2px;
+}
+
+.dark .cleverpay-slogan {
+  color: #94a3b8;
+}
+
+/* Animación para el logo */
+@keyframes logoReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.logo-reveal {
+  animation: logoReveal 0.5s cubic-bezier(0.26, 1.04, 0.54, 1) forwards;
+}
+
+/* Tarjetas con efecto de vidrio */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Botones premium */
+.premium-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%);
+  color: white;
+  font-weight: 500;
+}
+
+.premium-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.7s ease;
+}
+
+.premium-button:hover::before {
+  left: 100%;
+}
+
+.premium-button:hover {
+  box-shadow: 0 4px 15px rgba(10, 207, 131, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Inputs mejorados */
+.premium-input {
+  border-radius: 8px;
+  border: 1px solid rgba(203, 213, 225, 0.4);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 10px 16px;
+  transition: all 0.3s ease;
+}
+
+.premium-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  background: white;
+}
+
+.dark .premium-input {
+  background: rgba(30, 41, 59, 0.4);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+
+.dark .premium-input:focus {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: #10b981;
+}
+
+/* Efecto de fondo para páginas de autenticación */
+.auth-background {
+  position: relative;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.auth-background::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2310b981' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.5;
+  z-index: -1;
+}
+
+.dark .auth-background {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.dark .auth-background::before {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2310b981' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Navbar mejorado */
+.premium-navbar {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(203, 213, 225, 0.5);
+}
+
+.dark .premium-navbar {
+  background: rgba(15, 23, 42, 0.8);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+/* Efecto de hover para enlaces de navegación */
+.nav-link {
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #10b981, transparent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.nav-link:hover::after {
+  transform: scaleX(1);
+}
+
+/* Efecto de brillo para tarjetas */
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    to bottom right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(30deg);
+  animation: shine 6s infinite linear;
+}
+
+@keyframes shine {
+  from {
+    transform: rotate(30deg) translateX(-100%);
+  }
+  to {
+    transform: rotate(30deg) translateX(100%);
+  }
+}
+
+/* Botones de autenticación social mejorados */
+.social-auth-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(203, 213, 225, 0.5);
+  background: white;
+}
+
+.dark .social-auth-button {
+  background: rgba(30, 41, 59, 0.4);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+
+.social-auth-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dark .social-auth-button:hover {
+  background: rgba(30, 41, 59, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 

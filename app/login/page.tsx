@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { WalletIcon, Loader2, AlertCircle } from "lucide-react"
+import { Loader2, AlertCircle } from "lucide-react"
 import { useSettings } from "@/context/settings-context"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CleverPayLogo } from "@/components/cleverpay-logo"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -112,11 +113,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-md dark:border-border/20 elevated-surface">
+    <div className="flex min-h-screen items-center justify-center auth-background p-4">
+      <Card className="w-full max-w-md glass-card shine-effect">
         <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-2">
-            <WalletIcon className="h-10 w-10 text-primary" />
+          <div className="flex flex-col items-center space-y-2 mb-6">
+            <CleverPayLogo size="lg" centered />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Iniciar sesión</CardTitle>
           <CardDescription className="text-center">Ingresa tus credenciales para acceder a tu cuenta</CardDescription>
@@ -139,7 +140,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="dark:bg-muted/10 dark:border-border/30"
+                className="premium-input"
               />
             </div>
             <div className="space-y-2">
@@ -156,7 +157,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="dark:bg-muted/10 dark:border-border/30"
+                className="premium-input"
               />
             </div>
             <div className="flex items-center space-x-2">
@@ -170,11 +171,7 @@ export default function LoginPage() {
                 Recordarme por 30 días
               </Label>
             </div>
-            <Button
-              type="submit"
-              className="w-full dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full premium-button" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -204,7 +201,7 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-4">
             <Button
               variant="outline"
-              className="dark:bg-muted/10 dark:border-border/30 dark:hover:bg-muted/20"
+              className="social-auth-button"
               onClick={handleGoogleLogin}
               disabled={isGoogleLoading}
             >
@@ -235,14 +232,14 @@ export default function LoginPage() {
             </Button>
             <Button
               variant="outline"
-              className="dark:bg-muted/10 dark:border-border/30 dark:hover:bg-muted/20"
+              className="social-auth-button"
               onClick={handleFacebookLogin}
               disabled={isFacebookLoading}
             >
               {isFacebookLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="mr-2 h-4 w-4" fill="#1877F2" viewBox="0 0 24 24">
                   <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
                 </svg>
               )}

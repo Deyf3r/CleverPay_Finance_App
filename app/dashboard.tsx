@@ -5,13 +5,14 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   DollarSignIcon,
-  HomeIcon,
-  CreditCardIcon,
   BrainCircuitIcon,
-  BarChart4,
-  PiggyBank,
-  Calendar,
-  Download,
+  BarChart4Icon,
+  PiggyBankIcon,
+  CalendarIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  TrendingUpIcon,
+  TrendingDownIcon,
 } from "lucide-react"
 
 import { useFinance } from "@/context/finance-context"
@@ -24,19 +25,13 @@ import { format, parseISO, startOfMonth, endOfMonth } from "date-fns"
 import { ExportPDF } from "@/components/export-pdf"
 import { useState } from "react"
 import { DetailedFinanceView } from "@/components/detailed-finance-view"
+import TransactionList from "@/components/transaction-list"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 
 export default function DashboardPage() {
   const { state, getTotalBalance, getTotalIncome, getTotalExpenses, getSavingsRate } = useFinance()
   const { formatCurrency, translate } = useSettings()
-
-  const formatDate = (dateString: string) => {
-    return format(parseISO(dateString), "MMMM d, yyyy")
-  }
-
-  // Get the most recent transactions
-  const recentTransactions = [...state.transactions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 4)
 
   // Calcular estadísticas del mes actual
   const currentDate = new Date()
@@ -60,6 +55,46 @@ export default function DashboardPage() {
 
   // Añadir el estado para controlar la vista detallada
   const [showDetailedView, setShowDetailedView] = useState(false)
+
+  // Obtener las cuentas para mostrar en el dashboard
+  const accountsArray = Object.entries(state.accounts).map(([type, account]) => ({
+    type,
+    ...account,
+  }))
+
+  // Calcular las categorías de gastos principales
+  const topExpenseCategories = () => {
+    const categoryTotals: Record<string, number> = {}
+
+    state.transactions
+      .filter((t) => t.type === "expense")
+      .forEach((t) => {
+        const category = t.category
+        if (!categoryTotals[category]) categoryTotals[category] = 0
+        categoryTotals[category] += t.amount
+      })
+
+    return Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+  }
+
+  // Calcular las categorías de ingresos principales
+  const topIncomeCategories = () => {
+    const categoryTotals: Record<string, number> = {}
+
+    state.transactions
+      .filter((t) => t.type === "income")
+      .forEach((t) => {
+        const category = t.category
+        if (!categoryTotals[category]) categoryTotals[category] = 0
+        categoryTotals[category] += t.amount
+      })
+
+    return Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+  }
 
   // Añadir la condición para mostrar la vista detallada o el dashboard normal
   return (
@@ -107,9 +142,13 @@ export default function DashboardPage() {
                 <CardFooter className="p-2 pt-0">
                   <div className="flex w-full justify-between text-xs">
                     <div className="flex items-center">
-                      <Calendar className="mr-1 h-3 w-3" />
+                      <CalendarIcon className="mr-1 h-3 w-3" />
                       <span>{format(currentDate, "MMMM yyyy")}</span>
                     </div>
+                    <Link href="/accounts" className="text-primary hover:underline flex items-center">
+                      <span>{translate("nav.accounts")}</span>
+                      <ExternalLinkIcon className="ml-1 h-3 w-3" />
+                    </Link>
                   </div>
                 </CardFooter>
               </Card>
@@ -138,6 +177,10 @@ export default function DashboardPage() {
                         {translate("dashboard.this_month")}: {formatCurrency(currentMonthIncome)}
                       </span>
                     </div>
+                    <Link href="/transactions?type=income" className="text-primary hover:underline flex items-center">
+                      <span>{translate("transactions.income")}</span>
+                      <ExternalLinkIcon className="ml-1 h-3 w-3" />
+                    </Link>
                   </div>
                 </CardFooter>
               </Card>
@@ -166,6 +209,10 @@ export default function DashboardPage() {
                         {translate("dashboard.this_month")}: {formatCurrency(currentMonthExpenses)}
                       </span>
                     </div>
+                    <Link href="/transactions?type=expense" className="text-primary hover:underline flex items-center">
+                      <span>{translate("transactions.expenses")}</span>
+                      <ExternalLinkIcon className="ml-1 h-3 w-3" />
+                    </Link>
                   </div>
                 </CardFooter>
               </Card>
@@ -175,7 +222,7 @@ export default function DashboardPage() {
                 <CardHeader className="flex flex-row items-center justify-between pb-2 card-header-highlight">
                   <div className="flex items-center space-x-2">
                     <div className="rounded-full p-1 bg-purple-500 dark:bg-purple-600 bg-opacity-20 dark:bg-opacity-30">
-                      <PiggyBank className="h-5 w-5" />
+                      <PiggyBankIcon className="h-5 w-5" />
                     </div>
                     <CardTitle className="text-sm font-medium">{translate("dashboard.savings_rate")}</CardTitle>
                   </div>
@@ -187,9 +234,13 @@ export default function DashboardPage() {
                 <CardFooter className="p-2 pt-0">
                   <div className="flex w-full justify-between text-xs">
                     <div className="flex items-center">
-                      <Calendar className="mr-1 h-3 w-3" />
+                      <CalendarIcon className="mr-1 h-3 w-3" />
                       <span>{translate("dashboard.monthly_average")}</span>
                     </div>
+                    <Link href="/ai-insights?tab=savings" className="text-primary hover:underline flex items-center">
+                      <span>{translate("ai.savings")}</span>
+                      <ExternalLinkIcon className="ml-1 h-3 w-3" />
+                    </Link>
                   </div>
                 </CardFooter>
               </Card>
@@ -208,7 +259,7 @@ export default function DashboardPage() {
                     className="gap-1 dark:bg-muted/10 dark:border-border/30 dark:hover:bg-muted/20"
                     onClick={() => setShowDetailedView(true)}
                   >
-                    <BarChart4 className="h-3.5 w-3.5" />
+                    <BarChart4Icon className="h-3.5 w-3.5" />
                     {translate("dashboard.detailed_view")}
                   </Button>
                 </CardHeader>
@@ -230,7 +281,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <Button variant="ghost" size="sm" className="h-7 gap-1 dark:hover:bg-muted/20">
-                      <Download className="h-3.5 w-3.5" />
+                      <DownloadIcon className="h-3.5 w-3.5" />
                       {translate("dashboard.export_data")}
                     </Button>
                   </div>
@@ -239,65 +290,178 @@ export default function DashboardPage() {
 
               <Card className="card col-span-3 dark:border-border/20 elevated-surface">
                 <CardHeader className="card-header-highlight">
-                  <CardTitle>{translate("dashboard.recent_transactions")}</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{translate("dashboard.recent_transactions")}</CardTitle>
+                    <Link href="/add-transaction" className="text-primary hover:underline text-sm">
+                      {translate("transactions.add")}
+                    </Link>
+                  </div>
                   <CardDescription>{translate("dashboard.latest_activities")}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {recentTransactions.length > 0 ? (
-                      recentTransactions.map((transaction) => (
-                        <div className="flex items-center" key={transaction.id}>
-                          <div className="mr-4 rounded-full bg-primary/10 p-2 dark:bg-primary/20">
-                            {transaction.category === "housing" ? (
-                              <HomeIcon className="h-4 w-4 text-primary dark:text-primary-foreground" />
-                            ) : transaction.type === "income" ? (
-                              <DollarSignIcon className="h-4 w-4 text-primary dark:text-primary-foreground" />
-                            ) : (
-                              <CreditCardIcon className="h-4 w-4 text-primary dark:text-primary-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <p className="text-sm font-medium leading-none">{transaction.description}</p>
-                            <p className="text-sm text-muted-foreground">{formatDate(transaction.date)}</p>
-                          </div>
-                          <div
-                            className={`font-medium ${
-                              transaction.type === "income"
-                                ? "text-emerald-500 dark:text-emerald-400"
-                                : "text-rose-500 dark:text-rose-400"
-                            }`}
-                          >
-                            {transaction.type === "income" ? "+" : "-"}
-                            {formatCurrency(transaction.amount)}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-4 text-muted-foreground">
-                        {translate("dashboard.no_transactions")}
-                      </div>
-                    )}
+                  <TransactionList limit={5} showViewAll={true} />
+                </CardContent>
+              </Card>
+            </div>
 
-                    <div className="pt-2">
-                      <Button
-                        variant="outline"
-                        className="w-full dark:bg-muted/10 dark:border-border/30 dark:hover:bg-muted/20"
-                        asChild
-                      >
-                        <Link href="/transactions">{translate("dashboard.view_all")}</Link>
-                      </Button>
-                    </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <Card className="card dark:border-border/20 elevated-surface">
+                <CardHeader className="card-header-highlight">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{translate("nav.accounts")}</CardTitle>
+                    <Link href="/accounts" className="text-primary hover:underline text-sm">
+                      {translate("dashboard.view_all")}
+                    </Link>
+                  </div>
+                  <CardDescription>{translate("dashboard.across_accounts")}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {accountsArray.map((account) => (
+                      <div key={account.type} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              account.type === "checking"
+                                ? "bg-blue-500"
+                                : account.type === "savings"
+                                  ? "bg-green-500"
+                                  : account.type === "credit"
+                                    ? "bg-purple-500"
+                                    : "bg-amber-500"
+                            }`}
+                          />
+                          <span className="text-sm">{translate(`account.${account.type}`)}</span>
+                        </div>
+                        <Badge variant="outline" className="font-medium">
+                          {formatCurrency(account.balance)}
+                        </Badge>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
                 <CardFooter className="border-t px-6 py-3 dark:border-border/20 divider">
-                  <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
-                    <div>
-                      {translate("dashboard.total_transactions")}: {state.transactions.length}
-                    </div>
-                    <Link href="/add-transaction" className="text-primary hover:underline">
-                      {translate("dashboard.add_new")}
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/accounts">
+                      {translate("nav.accounts")}
+                      <ExternalLinkIcon className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card className="card dark:border-border/20 elevated-surface">
+                <CardHeader className="card-header-highlight">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{translate("dashboard.spending_trends")}</CardTitle>
+                    <Link href="/ai-insights" className="text-primary hover:underline text-sm">
+                      {translate("ai.insights")}
                     </Link>
                   </div>
+                  <CardDescription>{translate("dashboard.monthly_spending_evolution")}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {topExpenseCategories().map(([category, amount], index) => (
+                      <div key={category} className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">{translate(`category.${category}`)}</span>
+                          <span className="text-sm font-medium">{formatCurrency(amount)}</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full ${
+                              index === 0
+                                ? "bg-rose-500"
+                                : index === 1
+                                  ? "bg-orange-500"
+                                  : index === 2
+                                    ? "bg-amber-500"
+                                    : "bg-yellow-500"
+                            }`}
+                            style={{ width: `${Math.min(100, (amount / getTotalExpenses()) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+                <CardFooter className="border-t px-6 py-3 dark:border-border/20 divider">
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/ai-insights">
+                      {translate("ai.title")}
+                      <ExternalLinkIcon className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card className="card dark:border-border/20 elevated-surface">
+                <CardHeader className="card-header-highlight">
+                  <CardTitle>{translate("dashboard.expense_ratio")}</CardTitle>
+                  <CardDescription>{translate("dashboard.distribution_by_category")}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="income" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                      <TabsTrigger value="income" className="flex items-center gap-1">
+                        <TrendingUpIcon className="h-3.5 w-3.5 text-emerald-500" />
+                        {translate("transactions.income")}
+                      </TabsTrigger>
+                      <TabsTrigger value="expense" className="flex items-center gap-1">
+                        <TrendingDownIcon className="h-3.5 w-3.5 text-rose-500" />
+                        {translate("transactions.expenses")}
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="income">
+                      <div className="space-y-4">
+                        {topIncomeCategories().map(([category, amount]) => (
+                          <div key={category} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className="font-normal bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
+                              >
+                                {translate(`category.${category}`)}
+                              </Badge>
+                            </div>
+                            <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="expense">
+                      <div className="space-y-4">
+                        {topExpenseCategories()
+                          .slice(0, 3)
+                          .map(([category, amount]) => (
+                            <div key={category} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="font-normal bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 border-rose-200 dark:border-rose-800/30"
+                                >
+                                  {translate(`category.${category}`)}
+                                </Badge>
+                              </div>
+                              <span className="text-sm font-medium text-rose-600 dark:text-rose-400">
+                                {formatCurrency(amount)}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+                <CardFooter className="border-t px-6 py-3 dark:border-border/20 divider">
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/transactions">
+                      {translate("transactions.title")}
+                      <ExternalLinkIcon className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
                 </CardFooter>
               </Card>
             </div>

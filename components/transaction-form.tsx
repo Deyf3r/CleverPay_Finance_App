@@ -1,322 +1,788 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import { CalendarIcon, Check, ChevronsUpDown, Plus, X } from "lucide-react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { CalendarIcon } from "lucide-react"
-import { format, parseISO } from "date-fns"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 
-import { useFinance } from "@/context/finance-context"
-import { useSettings } from "@/context/settings-context"
-import type { TransactionType, TransactionCategory, AccountType, Transaction } from "@/types/finance"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
-import { currencies } from "@/lib/currencies"
-// Importar el nuevo componente simplificado
-import { TransactionSuccessSimplified } from "@/components/transaction-success-simplified"
+import { cn } from "@/lib/utils"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { TrendingUp } from "lucide-react"
 
-interface TransactionFormProps {
-  transactionId?: string
-}
+// Iconos para categorías
+import {
+  ShoppingCart,
+  Home,
+  Car,
+  Utensils,
+  Briefcase,
+  HeartPulse,
+  Plane,
+  Smartphone,
+  GraduationCap,
+  DollarSign,
+  CreditCard,
+  Film,
+  Zap,
+  PiggyBank,
+  Landmark,
+  ArrowUpRight,
+  ArrowDownLeft,
+} from "lucide-react"
 
-export default function TransactionForm({ transactionId }: TransactionFormProps) {
-  const router = useRouter()
-  const { addTransaction, editTransaction, getTransactionById } = useFinance()
-  const { formatCurrency, translate, settings } = useSettings()
-  const currencySymbol = currencies[settings.currency].symbol
-  const currencyCode = settings.currency
+// Esquema de validación
+const formSchema = z.object({
+  description: z.string().min(2, {
+    message: "La descripción debe tener al menos 2 caracteres.",
+  }),
+  amount: z.coerce.number().positive({
+    message: "El monto debe ser un número positivo.",
+  }),
+  date: z.date({
+    required_error: "Por favor selecciona una fecha.",
+  }),
+  category: z.string({
+    required_error: "Por favor selecciona una categoría.",
+  }),
+  type: z.enum(["ingreso", "gasto", "transferencia"], {
+    required_error: "Por favor selecciona un tipo de transacción.",
+  }),
+  account: z.string({
+    required_error: "Por favor selecciona una cuenta.",
+  }),
+  notes: z.string().optional(),
+  isRecurring: z.boolean().default(false),
+  recurringFrequency: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+})
 
-  const [type, setType] = useState<TransactionType>("expense")
-  const [amount, setAmount] = useState<string>("")
-  const [description, setDescription] = useState("")
-  const [category, setCategory] = useState<TransactionCategory>("other")
-  const [date, setDate] = useState<Date>(new Date())
-  const [account, setAccount] = useState<AccountType>("checking")
-  const [notes, setNotes] = useState("")
-  const [isEditing, setIsEditing] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null)
+// Categorías con iconos
+const categories = [
+  { value: "comida", label: "Comida y Restaurantes", icon: <Utensils className="mr-2 h-4 w-4" /> },
+  { value: "transporte", label: "Transporte", icon: <Car className="mr-2 h-4 w-4" /> },
+  { value: "hogar", label: "Hogar", icon: <Home className="mr-2 h-4 w-4" /> },
+  { value: "compras", label: "Compras", icon: <ShoppingCart className="mr-2 h-4 w-4" /> },
+  { value: "salud", label: "Salud", icon: <HeartPulse className="mr-2 h-4 w-4" /> },
+  { value: "viajes", label: "Viajes", icon: <Plane className="mr-2 h-4 w-4" /> },
+  { value: "tecnologia", label: "Tecnología", icon: <Smartphone className="mr-2 h-4 w-4" /> },
+  { value: "educacion", label: "Educación", icon: <GraduationCap className="mr-2 h-4 w-4" /> },
+  { value: "entretenimiento", label: "Entretenimiento", icon: <Film className="mr-2 h-4 w-4" /> },
+  { value: "servicios", label: "Servicios", icon: <Zap className="mr-2 h-4 w-4" /> },
+  { value: "sueldo", label: "Sueldo", icon: <Briefcase className="mr-2 h-4 w-4" /> },
+  { value: "inversiones", label: "Inversiones", icon: <TrendingUp className="mr-2 h-4 w-4" /> },
+  { value: "otros", label: "Otros", icon: <DollarSign className="mr-2 h-4 w-4" /> },
+]
 
-  useEffect(() => {
-    if (transactionId) {
-      const transaction = getTransactionById(transactionId)
-      if (transaction) {
-        setIsEditing(true)
-        setType(transaction.type)
-        setAmount(transaction.amount.toString())
-        setDescription(transaction.description)
-        setCategory(transaction.category)
-        setDate(parseISO(transaction.date))
-        setAccount(transaction.account)
-        setNotes(transaction.notes || "")
-      } else {
-        router.push("/transactions")
-      }
-    }
-  }, [transactionId, getTransactionById, router])
+// Cuentas de ejemplo
+const accounts = [
+  {
+    value: "cuenta-corriente",
+    label: "Cuenta Corriente",
+    balance: 2500.75,
+    icon: <CreditCard className="mr-2 h-4 w-4" />,
+  },
+  {
+    value: "cuenta-ahorros",
+    label: "Cuenta de Ahorros",
+    balance: 15000.5,
+    icon: <PiggyBank className="mr-2 h-4 w-4" />,
+  },
+  {
+    value: "tarjeta-credito",
+    label: "Tarjeta de Crédito",
+    balance: -450.25,
+    icon: <CreditCard className="mr-2 h-4 w-4" />,
+  },
+  { value: "efectivo", label: "Efectivo", balance: 300.0, icon: <DollarSign className="mr-2 h-4 w-4" /> },
+  {
+    value: "inversiones",
+    label: "Cuenta de Inversiones",
+    balance: 8750.0,
+    icon: <Landmark className="mr-2 h-4 w-4" />,
+  },
+]
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+// Tags predefinidos
+const predefinedTags = [
+  "Esencial",
+  "Lujo",
+  "Trabajo",
+  "Personal",
+  "Familia",
+  "Vacaciones",
+  "Proyecto",
+  "Subscripción",
+  "Impuestos",
+  "Regalo",
+]
 
-    if (!description.trim()) {
-      toast({
-        title: translate("alert.error"),
-        description: translate("alert.enter_description"),
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      toast({
-        title: translate("alert.error"),
-        description: translate("alert.enter_amount"),
-        variant: "destructive",
-      })
-      return
-    }
-
-    const transactionData = {
-      id: transactionId || crypto.randomUUID(),
-      type,
-      amount: Number.parseFloat(amount),
-      description,
-      category,
-      date: date.toISOString(),
-      account,
-      notes: notes.trim() || undefined,
-    }
-
-    if (isEditing && transactionId) {
-      editTransaction(transactionId, transactionData)
-      setCompletedTransaction(transactionData as Transaction)
-    } else {
-      addTransaction(transactionData)
-      setCompletedTransaction(transactionData as Transaction)
-    }
-
-    setShowSuccess(true)
-  }
-
-  const handleCloseSuccess = () => {
-    setShowSuccess(false)
-    router.push("/transactions")
-  }
-
-  // Reemplazar el uso del componente TransactionSuccess con TransactionSuccessSimplified
-  if (showSuccess && completedTransaction) {
-    return (
-      <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.3 }}
-        >
-          <TransactionSuccessSimplified
-            transaction={completedTransaction}
-            type={completedTransaction.type}
-            onClose={handleCloseSuccess}
-          />
-        </motion.div>
-      </AnimatePresence>
-    )
-  }
+// Componente para sugerencias inteligentes
+const SmartSuggestions = ({ onSelect, type }) => {
+  const suggestions =
+    type === "ingreso"
+      ? [
+          { description: "Sueldo mensual", amount: 2500, category: "sueldo" },
+          { description: "Dividendos", amount: 150, category: "inversiones" },
+          { description: "Freelance", amount: 400, category: "sueldo" },
+        ]
+      : [
+          { description: "Supermercado", amount: 85.5, category: "comida" },
+          { description: "Gasolina", amount: 45.0, category: "transporte" },
+          { description: "Netflix", amount: 12.99, category: "entretenimiento" },
+          { description: "Restaurante", amount: 35.0, category: "comida" },
+        ]
 
   return (
-    <motion.form
-      className="space-y-6"
-      onSubmit={handleSubmit}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className="space-y-4">
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1, duration: 0.3 }}
-        >
-          <Label htmlFor="transaction-type">{translate("transaction.type")}</Label>
-          <RadioGroup
-            id="transaction-type"
-            value={type}
-            onValueChange={(value) => setType(value as TransactionType)}
-            className="flex gap-4 mt-2"
+    <div className="mt-4">
+      <h3 className="text-sm font-medium mb-2">Sugerencias rápidas</h3>
+      <div className="flex flex-wrap gap-2">
+        {suggestions.map((suggestion, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="expense" id="expense" />
-              <Label htmlFor="expense" className="font-normal">
-                {translate("transaction.expense")}
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="income" id="income" />
-              <Label htmlFor="income" className="font-normal">
-                {translate("transaction.income")}
-              </Label>
-            </div>
-          </RadioGroup>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2, duration: 0.3 }}
-        >
-          <Label htmlFor="amount">{translate("transaction.amount")}</Label>
-          <div className="relative mt-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">{currencySymbol}</span>
-            </div>
-            <Input
-              type="number"
-              name="amount"
-              id="amount"
-              className="pl-7 pr-12"
-              placeholder="0.00"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">{currencyCode}</span>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3, duration: 0.3 }}
-        >
-          <Label htmlFor="description">{translate("transaction.description")}</Label>
-          <Input
-            type="text"
-            id="description"
-            placeholder={translate("transaction.description_placeholder")}
-            className="mt-1"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4, duration: 0.3 }}
-        >
-          <Label htmlFor="category">{translate("transaction.category")}</Label>
-          <Select value={category} onValueChange={(value) => setCategory(value as TransactionCategory)}>
-            <SelectTrigger id="category" className="mt-1">
-              <SelectValue placeholder={translate("transaction.select_category")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="food">{translate("category.food")}</SelectItem>
-              <SelectItem value="transportation">{translate("category.transportation")}</SelectItem>
-              <SelectItem value="housing">{translate("category.housing")}</SelectItem>
-              <SelectItem value="utilities">{translate("category.utilities")}</SelectItem>
-              <SelectItem value="entertainment">{translate("category.entertainment")}</SelectItem>
-              <SelectItem value="health">{translate("category.health")}</SelectItem>
-              <SelectItem value="shopping">{translate("category.shopping")}</SelectItem>
-              <SelectItem value="personal">{translate("category.personal")}</SelectItem>
-              <SelectItem value="education">{translate("category.education")}</SelectItem>
-              <SelectItem value="travel">{translate("category.travel")}</SelectItem>
-              <SelectItem value="salary">{translate("category.salary")}</SelectItem>
-              <SelectItem value="investment">{translate("category.investment")}</SelectItem>
-              <SelectItem value="other">{translate("category.other")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5, duration: 0.3 }}
-        >
-          <Label htmlFor="date">{translate("transaction.date")}</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button id="date" variant={"outline"} className="w-full justify-start text-left font-normal mt-1">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {format(date, "PPP")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(newDate) => newDate && setDate(newDate)}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.6, duration: 0.3 }}
-        >
-          <Label htmlFor="account">{translate("transaction.account")}</Label>
-          <Select value={account} onValueChange={(value) => setAccount(value as AccountType)}>
-            <SelectTrigger id="account" className="mt-1">
-              <SelectValue placeholder={translate("transaction.select_account")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="checking">{translate("account.checking")}</SelectItem>
-              <SelectItem value="savings">{translate("account.savings")}</SelectItem>
-              <SelectItem value="credit">{translate("account.credit")}</SelectItem>
-              <SelectItem value="cash">{translate("account.cash")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.7, duration: 0.3 }}
-        >
-          <Label htmlFor="notes">{translate("transaction.notes")}</Label>
-          <Input
-            type="text"
-            id="notes"
-            placeholder={translate("transaction.notes_placeholder")}
-            className="mt-1"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </motion.div>
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-accent flex items-center gap-1 py-1.5 px-3"
+              onClick={() => onSelect(suggestion)}
+            >
+              {suggestion.description}
+              <span className="font-bold ml-1">${suggestion.amount}</span>
+            </Badge>
+          </motion.div>
+        ))}
       </div>
+    </div>
+  )
+}
 
-      <motion.div
-        className="flex justify-end space-x-4"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8, duration: 0.3 }}
-      >
-        <Button variant="outline" asChild>
-          <Link href="/transactions">{translate("transaction.cancel")}</Link>
+// Componente para el selector de cuenta con balance
+const AccountSelector = ({ accounts, value, onChange }) => {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className="w-full justify-between">
+          {value ? accounts.find((account) => account.value === value)?.label : "Selecciona una cuenta"}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
-        <Button type="submit" className="relative overflow-hidden group">
-          <span className="relative z-10">
-            {isEditing ? translate("transaction.update") : translate("transaction.save")}
-          </span>
-          <span className="absolute inset-0 bg-primary-foreground/10 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></span>
-        </Button>
-      </motion.div>
-    </motion.form>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0">
+        <Command>
+          <CommandInput placeholder="Buscar cuenta..." />
+          <CommandList>
+            <CommandEmpty>No se encontraron cuentas.</CommandEmpty>
+            <CommandGroup>
+              {accounts.map((account) => (
+                <CommandItem
+                  key={account.value}
+                  value={account.value}
+                  onSelect={() => onChange(account.value)}
+                  className="flex justify-between items-center"
+                >
+                  <div className="flex items-center">
+                    {account.icon}
+                    {account.label}
+                  </div>
+                  <Badge variant={account.balance >= 0 ? "outline" : "destructive"} className="ml-2">
+                    ${account.balance.toFixed(2)}
+                  </Badge>
+                  {value === account.value && <Check className="ml-auto h-4 w-4" />}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// Componente principal del formulario
+export function TransactionForm() {
+  const router = useRouter()
+  const [selectedTags, setSelectedTags] = useState([])
+  const [newTag, setNewTag] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState("basico")
+  const [previewData, setPreviewData] = useState(null)
+
+  // Inicializar el formulario
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      description: "",
+      amount: undefined,
+      date: new Date(),
+      category: "",
+      type: "gasto",
+      account: "",
+      notes: "",
+      isRecurring: false,
+      recurringFrequency: "mensual",
+      tags: [],
+    },
+  })
+
+  // Observar cambios en el tipo de transacción
+  const transactionType = form.watch("type")
+
+  // Manejar envío del formulario
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true)
+
+    try {
+      // Agregar tags al objeto de valores
+      values.tags = selectedTags
+
+      // Simular envío a API
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      // Mostrar notificación de éxito
+      toast({
+        title: "¡Transacción añadida con éxito!",
+        description: (
+          <div className="flex items-center gap-2">
+            <span>{values.description}</span>
+            <Badge variant={values.type === "ingreso" ? "success" : "destructive"}>
+              {values.type === "ingreso" ? "+" : "-"}${values.amount}
+            </Badge>
+          </div>
+        ),
+      })
+
+      // Redireccionar a la página de transacciones
+      router.push("/transactions")
+      router.refresh()
+    } catch (error) {
+      console.error("Error al añadir transacción:", error)
+      toast({
+        title: "Error al añadir la transacción",
+        description: "Por favor, inténtalo de nuevo más tarde.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Manejar selección de sugerencia
+  const handleSuggestionSelect = (suggestion) => {
+    form.setValue("description", suggestion.description)
+    form.setValue("amount", suggestion.amount)
+    form.setValue("category", suggestion.category)
+  }
+
+  // Manejar adición de tag
+  const handleAddTag = () => {
+    if (newTag && !selectedTags.includes(newTag)) {
+      setSelectedTags([...selectedTags, newTag])
+      setNewTag("")
+    }
+  }
+
+  // Manejar eliminación de tag
+  const handleRemoveTag = (tag) => {
+    setSelectedTags(selectedTags.filter((t) => t !== tag))
+  }
+
+  // Generar vista previa
+  const generatePreview = () => {
+    const values = form.getValues()
+    setPreviewData({
+      ...values,
+      tags: selectedTags,
+      date: format(values.date, "PPP", { locale: es }),
+      categoryLabel: categories.find((c) => c.value === values.category)?.label || values.category,
+      accountLabel: accounts.find((a) => a.value === values.account)?.label || values.account,
+    })
+  }
+
+  // Efecto para actualizar la vista previa cuando cambian los valores
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      if (activeTab === "vista-previa") {
+        generatePreview()
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [form.watch, activeTab, selectedTags])
+
+  // Efecto para generar la vista previa al cambiar a esa pestaña
+  useEffect(() => {
+    if (activeTab === "vista-previa") {
+      generatePreview()
+    }
+  }, [activeTab])
+
+  return (
+    <div className="w-full max-w-3xl mx-auto">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-3 mb-6">
+          <TabsTrigger value="basico">Información Básica</TabsTrigger>
+          <TabsTrigger value="avanzado">Opciones Avanzadas</TabsTrigger>
+          <TabsTrigger value="vista-previa">Vista Previa</TabsTrigger>
+        </TabsList>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <TabsContent value="basico" className="space-y-6">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Detalles de la Transacción</CardTitle>
+                    <CardDescription>Ingresa la información básica de tu transacción</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Tipo de transacción */}
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de Transacción</FormLabel>
+                          <div className="grid grid-cols-3 gap-2">
+                            <Button
+                              type="button"
+                              variant={field.value === "ingreso" ? "default" : "outline"}
+                              className={cn(
+                                "flex items-center gap-2",
+                                field.value === "ingreso" && "bg-green-600 hover:bg-green-700",
+                              )}
+                              onClick={() => field.onChange("ingreso")}
+                            >
+                              <ArrowDownLeft className="h-4 w-4" />
+                              Ingreso
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={field.value === "gasto" ? "default" : "outline"}
+                              className={cn(
+                                "flex items-center gap-2",
+                                field.value === "gasto" && "bg-red-600 hover:bg-red-700",
+                              )}
+                              onClick={() => field.onChange("gasto")}
+                            >
+                              <ArrowUpRight className="h-4 w-4" />
+                              Gasto
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={field.value === "transferencia" ? "default" : "outline"}
+                              className={cn(
+                                "flex items-center gap-2",
+                                field.value === "transferencia" && "bg-blue-600 hover:bg-blue-700",
+                              )}
+                              onClick={() => field.onChange("transferencia")}
+                            >
+                              <ArrowUpRight className="h-4 w-4" />
+                              Transferencia
+                            </Button>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Descripción */}
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descripción</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ej: Compra en supermercado" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Monto */}
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Monto</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                              <Input type="number" step="0.01" placeholder="0.00" className="pl-10" {...field} />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Fecha */}
+                    <FormField
+                      control={form.control}
+                      name="date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Fecha</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground",
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP", { locale: es })
+                                  ) : (
+                                    <span>Selecciona una fecha</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                                locale={es}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Categoría */}
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Categoría</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                                >
+                                  {field.value ? (
+                                    <div className="flex items-center">
+                                      {categories.find((category) => category.value === field.value)?.icon}
+                                      {categories.find((category) => category.value === field.value)?.label}
+                                    </div>
+                                  ) : (
+                                    "Selecciona una categoría"
+                                  )}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0">
+                              <Command>
+                                <CommandInput placeholder="Buscar categoría..." />
+                                <CommandList>
+                                  <CommandEmpty>No se encontraron categorías.</CommandEmpty>
+                                  <CommandGroup>
+                                    {categories.map((category) => (
+                                      <CommandItem
+                                        key={category.value}
+                                        value={category.value}
+                                        onSelect={() => {
+                                          form.setValue("category", category.value)
+                                        }}
+                                        className="flex items-center"
+                                      >
+                                        {category.icon}
+                                        {category.label}
+                                        {field.value === category.value && <Check className="ml-auto h-4 w-4" />}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Cuenta */}
+                    <FormField
+                      control={form.control}
+                      name="account"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cuenta</FormLabel>
+                          <FormControl>
+                            <AccountSelector accounts={accounts} value={field.value} onChange={field.onChange} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Sugerencias inteligentes */}
+                    <SmartSuggestions onSelect={handleSuggestionSelect} type={transactionType} />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="avanzado" className="space-y-6">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Opciones Avanzadas</CardTitle>
+                    <CardDescription>Configura opciones adicionales para tu transacción</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Notas */}
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notas</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Añade notas o detalles adicionales sobre esta transacción"
+                              className="resize-none"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Transacción recurrente */}
+                    <FormField
+                      control={form.control}
+                      name="isRecurring"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Transacción Recurrente</FormLabel>
+                            <FormDescription>Marca si esta transacción se repite regularmente</FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Frecuencia de recurrencia */}
+                    {form.watch("isRecurring") && (
+                      <FormField
+                        control={form.control}
+                        name="recurringFrequency"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Frecuencia</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona la frecuencia" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="diaria">Diaria</SelectItem>
+                                <SelectItem value="semanal">Semanal</SelectItem>
+                                <SelectItem value="quincenal">Quincenal</SelectItem>
+                                <SelectItem value="mensual">Mensual</SelectItem>
+                                <SelectItem value="trimestral">Trimestral</SelectItem>
+                                <SelectItem value="anual">Anual</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {/* Etiquetas */}
+                    <div className="space-y-2">
+                      <FormLabel>Etiquetas</FormLabel>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {selectedTags.map((tag) => (
+                          <Badge key={tag} variant="secondary" className="flex items-center gap-1 py-1.5">
+                            {tag}
+                            <X className="h-3 w-3 cursor-pointer" onClick={() => handleRemoveTag(tag)} />
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newTag}
+                          onChange={(e) => setNewTag(e.target.value)}
+                          placeholder="Nueva etiqueta"
+                          className="flex-1"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              handleAddTag()
+                            }
+                          }}
+                        />
+                        <Button type="button" size="icon" onClick={handleAddTag} disabled={!newTag}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-sm text-muted-foreground mb-1">Etiquetas sugeridas:</p>
+                        <ScrollArea className="h-20 w-full rounded-md border">
+                          <div className="flex flex-wrap gap-1 p-2">
+                            {predefinedTags.map((tag) => (
+                              <Badge
+                                key={tag}
+                                variant="outline"
+                                className="cursor-pointer hover:bg-accent"
+                                onClick={() => {
+                                  if (!selectedTags.includes(tag)) {
+                                    setSelectedTags([...selectedTags, tag])
+                                  }
+                                }}
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="vista-previa">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                {previewData ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Vista Previa de la Transacción</CardTitle>
+                      <CardDescription>Revisa los detalles antes de guardar</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-medium">{previewData.description}</h3>
+                          <Badge
+                            variant={
+                              previewData.type === "ingreso"
+                                ? "success"
+                                : previewData.type === "gasto"
+                                  ? "destructive"
+                                  : "outline"
+                            }
+                            className="text-lg py-1.5"
+                          >
+                            {previewData.type === "ingreso" ? "+" : "-"}${previewData.amount}
+                          </Badge>
+                        </div>
+
+                        <Separator />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Fecha</p>
+                            <p className="font-medium">{previewData.date}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Categoría</p>
+                            <p className="font-medium">{previewData.categoryLabel}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Cuenta</p>
+                            <p className="font-medium">{previewData.accountLabel}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Tipo</p>
+                            <p className="font-medium capitalize">{previewData.type}</p>
+                          </div>
+                        </div>
+
+                        {previewData.isRecurring && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Recurrencia</p>
+                            <p className="font-medium capitalize">{previewData.recurringFrequency}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="text-center py-12">
+                    <h2 className="text-xl font-semibold mb-4">No hay vista previa disponible</h2>
+                    <p className="text-muted-foreground">
+                      Completa los campos en las pestañas anteriores para generar una vista previa.
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            </TabsContent>
+
+            <motion.div
+              className="flex justify-end space-x-2"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Button variant="ghost" onClick={() => router.back()}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                )}
+                Guardar Transacción
+              </Button>
+            </motion.div>
+          </form>
+        </Form>
+      </Tabs>
+    </div>
   )
 }
 
