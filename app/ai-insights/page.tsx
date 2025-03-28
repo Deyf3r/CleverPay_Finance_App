@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import NavBar from "@/components/nav-bar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,12 +28,7 @@ import {
   LineChartIcon,
   PieChartIcon,
   TargetIcon,
-  ChevronRightIcon,
-  CoinsIcon,
   WalletIcon,
-  CreditCardIcon,
-  HeartIcon,
-  ShieldIcon,
   BarChartIcon,
   CheckIcon,
 } from "lucide-react"
@@ -43,6 +36,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { FinancialAdviceHub } from "@/components/financial-advice-hub"
 
 export default function AIInsightsPage() {
   const { state } = useFinance()
@@ -61,100 +55,29 @@ export default function AIInsightsPage() {
     topExpenseCategories: any[]
   }>({ insights: [], spendingTrends: [], topExpenseCategories: [] })
 
-  // Estado para consejos financieros
-  const [financialTips, setFinancialTips] = useState<
-    {
-      title: string
-      description: string
-      icon: React.ReactNode
-      action?: string
-      color: string
-    }[]
-  >([])
+  // Efecto para calcular todos los análisis de IA
+  useEffect(() => {
+    // Simular un pequeño retraso para dar la sensación de procesamiento
+    const timer = setTimeout(() => {
+      // Realizar todos los cálculos de IA
+      const expensePreds = predictExpenses(state.transactions)
+      const incomePreds = predictIncome(state.transactions)
+      const anomaliesResult = identifyAnomalousSpending(state.transactions)
+      const savingsGoalResult = suggestSavingsGoals(state.transactions)
+      const insightsResult = generateFinancialInsights(state.transactions)
 
-  // Calcular ahorros actuales del mes
-  const currentDate = new Date()
-  const currentMonth = currentDate.getMonth()
-  const currentYear = currentDate.getFullYear()
+      // Actualizar los estados
+      setExpensePredictions(expensePreds)
+      setIncomePredictions(incomePreds)
+      setAnomalies(anomaliesResult)
+      setSavingsGoal(savingsGoalResult)
+      setInsights(insightsResult)
 
-  const currentMonthIncome = state.transactions
-    .filter((t) => {
-      const date = new Date(t.date)
-      return t.type === "income" && date.getMonth() === currentMonth && date.getFullYear() === currentYear
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
+      setIsLoading(false)
+    }, 1000)
 
-  const currentMonthExpenses = state.transactions
-    .filter((t) => {
-      const date = new Date(t.date)
-      return t.type === "expense" && date.getMonth() === currentMonth && date.getFullYear() === currentYear
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const currentSavings = Math.max(0, currentMonthIncome - currentMonthExpenses)
-
-  // Generar consejos financieros personalizados
-  const generateFinancialTips = (insightData: any) => {
-    const tips = []
-
-    // Consejo basado en categoría principal de gasto
-    if (insightData.topExpenseCategories.length > 0) {
-      const topCategory = insightData.topExpenseCategories[0]
-      if (topCategory.percentage > 40) {
-        tips.push({
-          title: translate("tips.diversify_spending"),
-          description: translate("tips.diversify_spending_desc").replace(
-            "{category}",
-            translate(`category.${topCategory.category}`),
-          ),
-          icon: <PieChartIcon className="h-5 w-5" />,
-          action: translate("tips.create_budget"),
-          color: "from-indigo-500 to-purple-500",
-        })
-      }
-    }
-
-    // Consejo sobre inversiones si hay buenos ahorros
-    const savingsRate = currentMonthIncome > 0 ? (currentSavings / currentMonthIncome) * 100 : 0
-    if (savingsRate > 15) {
-      tips.push({
-        title: translate("tips.investment_opportunity"),
-        description: translate("tips.investment_opportunity_desc"),
-        icon: <TrendingUpIcon className="h-5 w-5" />,
-        action: translate("tips.explore_investments"),
-        color: "from-emerald-500 to-green-500",
-      })
-    }
-
-    // Consejo sobre fondo de emergencia
-    tips.push({
-      title: translate("tips.emergency_fund"),
-      description: translate("tips.emergency_fund_desc"),
-      icon: <ShieldIcon className="h-5 w-5" />,
-      action: translate("tips.start_saving"),
-      color: "from-amber-500 to-yellow-500",
-    })
-
-    // Consejo sobre automatizar ahorros
-    tips.push({
-      title: translate("tips.automate_savings"),
-      description: translate("tips.automate_savings_desc"),
-      icon: <CoinsIcon className="h-5 w-5" />,
-      action: translate("tips.set_up_auto"),
-      color: "from-blue-500 to-cyan-500",
-    })
-
-    // Consejo sobre reducir deudas
-    tips.push({
-      title: translate("tips.reduce_debt"),
-      description: translate("tips.reduce_debt_desc"),
-      icon: <CreditCardIcon className="h-5 w-5" />,
-      action: translate("tips.debt_strategy"),
-      color: "from-rose-500 to-pink-500",
-    })
-
-    setFinancialTips(tips)
-  }
+    return () => clearTimeout(timer)
+  }, [state.transactions])
 
   // Traducir insights
   const translateInsight = (insightKey: string) => {
@@ -185,33 +108,6 @@ export default function AIInsightsPage() {
         return insightKey
     }
   }
-
-  // Efecto para calcular todos los análisis de IA
-  useEffect(() => {
-    // Simular un pequeño retraso para dar la sensación de procesamiento
-    const timer = setTimeout(() => {
-      // Realizar todos los cálculos de IA
-      const expensePreds = predictExpenses(state.transactions)
-      const incomePreds = predictIncome(state.transactions)
-      const anomaliesResult = identifyAnomalousSpending(state.transactions)
-      const savingsGoalResult = suggestSavingsGoals(state.transactions)
-      const insightsResult = generateFinancialInsights(state.transactions)
-
-      // Actualizar los estados
-      setExpensePredictions(expensePreds)
-      setIncomePredictions(incomePreds)
-      setAnomalies(anomaliesResult)
-      setSavingsGoal(savingsGoalResult)
-      setInsights(insightsResult)
-
-      // Generar consejos financieros
-      generateFinancialTips(insightsResult)
-
-      setIsLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [state.transactions])
 
   // Renderizar un estado de carga
   if (isLoading) {
@@ -387,42 +283,8 @@ export default function AIInsightsPage() {
                   })}
                 </div>
 
-                {/* Consejos Financieros */}
-                <div className="mt-8">
-                  <h3 className="text-xl font-semibold flex items-center gap-2 mb-5 text-gray-800 dark:text-gray-100">
-                    <HeartIcon className="h-6 w-6 text-rose-500" />
-                    {translate("tips.financial_tips")}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {financialTips.map((tip, index) => (
-                      <div
-                        key={index}
-                        className="bg-white dark:bg-gray-800/60 rounded-xl p-5 shadow-md border border-gray-100 dark:border-gray-700/30 hover:shadow-lg transition-all transform hover:-translate-y-1 overflow-hidden relative"
-                      >
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br opacity-10 rounded-full -mr-8 -mt-8 ${tip.color}"></div>
-                        <div className="flex items-start gap-4">
-                          <div className={`rounded-full bg-gradient-to-r ${tip.color} p-3 shadow-md`}>{tip.icon}</div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-lg text-gray-900 dark:text-gray-100">{tip.title}</h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{tip.description}</p>
-                            {tip.action && (
-                              <div className="mt-3">
-                                <Button
-                                  variant="link"
-                                  size="sm"
-                                  className="p-0 h-auto text-sm text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
-                                >
-                                  {tip.action}
-                                  <ChevronRightIcon className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {/* Consejos Financieros Interactivos */}
+                <FinancialAdviceHub />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                   {/* Spending Trends */}
@@ -760,16 +622,19 @@ export default function AIInsightsPage() {
                           <div className="flex justify-between text-sm mb-2">
                             <span>{translate("ai.current_savings")}</span>
                             <span className="font-medium">
-                              {formatCurrency(currentSavings)}
+                              {formatCurrency(savingsGoal.currentSavings || 0)}
                               <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">
-                                ({Math.round((currentSavings / savingsGoal.amount) * 100)}% {translate("ai.of_goal")})
+                                ({Math.round(((savingsGoal.currentSavings || 0) / savingsGoal.amount) * 100)}%{" "}
+                                {translate("ai.of_goal")})
                               </span>
                             </span>
                           </div>
                           <div className="h-3 w-full bg-emerald-100 dark:bg-emerald-900/20 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
-                              style={{ width: `${Math.min(100, (currentSavings / savingsGoal.amount) * 100)}%` }}
+                              style={{
+                                width: `${Math.min(100, ((savingsGoal.currentSavings || 0) / savingsGoal.amount) * 100)}%`,
+                              }}
                             ></div>
                           </div>
                         </div>
