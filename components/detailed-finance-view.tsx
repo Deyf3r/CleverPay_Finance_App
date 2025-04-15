@@ -467,4 +467,3 @@ export function DetailedFinanceView({ onBack }: { onBack: () => void }) {
     </div>
   )
 }
-

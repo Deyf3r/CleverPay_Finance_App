@@ -177,4 +177,3 @@ export function PaymentMethodModal({ isOpen, onClose, plan, onSuccess }: Payment
     </Dialog>
   )
 }
-

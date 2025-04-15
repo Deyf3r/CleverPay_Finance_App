@@ -39,4 +39,3 @@ export function LogoIcon({ className, size = 24 }: LogoIconProps) {
     </svg>
   )
 }
-

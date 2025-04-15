@@ -26,4 +26,3 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
 
   return <SubscriptionPlansModal isOpen={isOpen} onClose={onClose} currentPlan={plan.id} />
 }
-

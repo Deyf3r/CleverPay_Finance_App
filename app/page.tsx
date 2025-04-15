@@ -29,4 +29,3 @@ export default function Home() {
   // Si no está autenticado, no mostrar nada (se redirigirá a login)
   return null
 }
-

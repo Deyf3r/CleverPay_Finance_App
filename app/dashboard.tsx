@@ -305,7 +305,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="card dark:border-border/20 elevated-surface">
+              <Card className="card dark:border-border/20 elevated-surface h-full">
                 <CardHeader className="card-header-highlight">
                   <div className="flex items-center justify-between">
                     <CardTitle>{translate("nav.accounts")}</CardTitle>
@@ -315,7 +315,7 @@ export default function DashboardPage() {
                   </div>
                   <CardDescription>{translate("dashboard.across_accounts")}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1">
                   <div className="space-y-4">
                     {accountsArray.map((account) => (
                       <div key={account.type} className="flex items-center justify-between">
@@ -340,7 +340,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </CardContent>
-                <CardFooter className="border-t px-6 py-3 dark:border-border/20 divider">
+                <CardFooter className="border-t px-6 py-3 dark:border-border/20 divider mt-auto">
                   <Button variant="outline" className="w-full" asChild>
                     <Link href="/accounts">
                       {translate("nav.accounts")}
@@ -350,7 +350,7 @@ export default function DashboardPage() {
                 </CardFooter>
               </Card>
 
-              <Card className="card dark:border-border/20 elevated-surface">
+              <Card className="card dark:border-border/20 elevated-surface h-full">
                 <CardHeader className="card-header-highlight">
                   <div className="flex items-center justify-between">
                     <CardTitle>{translate("dashboard.spending_trends")}</CardTitle>
@@ -360,7 +360,7 @@ export default function DashboardPage() {
                   </div>
                   <CardDescription>{translate("dashboard.monthly_spending_evolution")}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1">
                   <div className="space-y-4">
                     {topExpenseCategories().map(([category, amount], index) => (
                       <div key={category} className="space-y-1">
@@ -386,7 +386,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </CardContent>
-                <CardFooter className="border-t px-6 py-3 dark:border-border/20 divider">
+                <CardFooter className="border-t px-6 py-3 dark:border-border/20 divider mt-auto">
                   <Button variant="outline" className="w-full" asChild>
                     <Link href="/ai-insights">
                       {translate("ai.title")}
@@ -396,12 +396,12 @@ export default function DashboardPage() {
                 </CardFooter>
               </Card>
 
-              <Card className="card dark:border-border/20 elevated-surface">
+              <Card className="card dark:border-border/20 elevated-surface h-full">
                 <CardHeader className="card-header-highlight">
                   <CardTitle>{translate("dashboard.expense_ratio")}</CardTitle>
                   <CardDescription>{translate("dashboard.distribution_by_category")}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1">
                   <Tabs defaultValue="income" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-4">
                       <TabsTrigger value="income" className="flex items-center gap-1">
@@ -455,7 +455,7 @@ export default function DashboardPage() {
                     </TabsContent>
                   </Tabs>
                 </CardContent>
-                <CardFooter className="border-t px-6 py-3 dark:border-border/20 divider">
+                <CardFooter className="border-t px-6 py-3 dark:border-border/20 divider mt-auto">
                   <Button variant="outline" className="w-full" asChild>
                     <Link href="/transactions">
                       {translate("transactions.title")}
@@ -471,4 +471,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-

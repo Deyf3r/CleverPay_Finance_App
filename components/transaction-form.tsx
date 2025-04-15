@@ -219,7 +219,7 @@ const AccountSelector = ({ accounts, value, onChange }) => {
 }
 
 // Componente principal del formulario
-export function TransactionForm() {
+export default function TransactionForm() {
   const router = useRouter()
   const [selectedTags, setSelectedTags] = useState([])
   const [newTag, setNewTag] = useState("")
@@ -785,4 +785,3 @@ export function TransactionForm() {
     </div>
   )
 }
-

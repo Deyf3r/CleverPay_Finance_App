@@ -102,4 +102,3 @@ export function ScaleIn({
     </motion.div>
   )
 }
-

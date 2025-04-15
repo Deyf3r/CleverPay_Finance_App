@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useFinance } from "@/context/finance-context"
 import { useSettings } from "@/context/settings-context"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,7 @@ export function TransferFunds({ onComplete }: TransferFundsProps) {
   const [description, setDescription] = useState("")
   const [showSuccess, setShowSuccess] = useState(false)
   const [transferAmount, setTransferAmount] = useState(0)
+  const [accounts, setAccounts] = useState<{ [key: string]: { balance: number; name: string } }>({})
 
   // Obtener el símbolo de la moneda de forma segura
   const getCurrencySymbol = (): string => {
@@ -53,6 +54,29 @@ export function TransferFunds({ onComplete }: TransferFundsProps) {
       return "$"
     }
   }
+
+  useEffect(() => {
+    // Formatear las cuentas con sus nombres traducidos y saldos
+    const formattedAccounts = Object.entries(state.accounts).reduce(
+      (acc, [type, account]) => {
+        acc[type] = {
+          balance: account.balance,
+          name: `${translate(`account.${type}`)} ${formatCurrency(account.balance)}`,
+        }
+        return acc
+      },
+      {} as { [key: string]: { balance: number; name: string } },
+    )
+
+    setAccounts(formattedAccounts)
+
+    // Si solo hay dos cuentas, seleccionarlas automáticamente
+    const accountTypes = Object.keys(state.accounts)
+    if (accountTypes.length >= 2 && !fromAccount && !toAccount) {
+      setFromAccount(accountTypes[0])
+      setToAccount(accountTypes[1])
+    }
+  }, [state.accounts, fromAccount, toAccount, translate, formatCurrency])
 
   const currencySymbol = getCurrencySymbol()
 
@@ -171,14 +195,16 @@ export function TransferFunds({ onComplete }: TransferFundsProps) {
       transition={{ duration: 0.3 }}
     >
       <div className="space-y-2">
-        <Label htmlFor="from-account">{translate("accounts.from_account")}</Label>
+        <Label htmlFor="from-account" className="text-base font-medium">
+          {translate("accounts.from_account")}
+        </Label>
         <Select value={fromAccount} onValueChange={setFromAccount}>
-          <SelectTrigger id="from-account">
+          <SelectTrigger id="from-account" className="w-full p-3 text-base">
             <SelectValue placeholder={translate("accounts.select_account")} />
           </SelectTrigger>
           <SelectContent>
             {Object.keys(state.accounts).map((account) => (
-              <SelectItem key={account} value={account}>
+              <SelectItem key={account} value={account} className="text-base py-2">
                 {translate(`account.${account}`)} (
                 {formatCurrency(state.accounts[account as keyof typeof state.accounts].balance)})
               </SelectItem>
@@ -188,32 +214,39 @@ export function TransferFunds({ onComplete }: TransferFundsProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="to-account">{translate("accounts.to_account")}</Label>
+        <Label htmlFor="to-account" className="text-base font-medium">
+          {translate("accounts.to_account")}
+        </Label>
         <Select value={toAccount} onValueChange={setToAccount}>
-          <SelectTrigger id="to-account">
+          <SelectTrigger id="to-account" className="w-full p-3 text-base">
             <SelectValue placeholder={translate("accounts.select_account")} />
           </SelectTrigger>
           <SelectContent>
-            {Object.keys(state.accounts).map((account) => (
-              <SelectItem key={account} value={account}>
-                {translate(`account.${account}`)}
-              </SelectItem>
-            ))}
+            {Object.keys(state.accounts)
+              .filter((account) => account !== fromAccount)
+              .map((account) => (
+                <SelectItem key={account} value={account} className="text-base py-2">
+                  {translate(`account.${account}`)} (
+                  {formatCurrency(state.accounts[account as keyof typeof state.accounts].balance)})
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="amount">{translate("accounts.amount")}</Label>
+        <Label htmlFor="amount" className="text-base font-medium">
+          {translate("accounts.amount")}
+        </Label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span className="text-gray-500 sm:text-sm">{currencySymbol}</span>
+            <span className="text-gray-500 sm:text-sm text-lg">{currencySymbol}</span>
           </div>
           <Input
             id="amount"
             type="number"
             placeholder="0.00"
-            className="pl-7"
+            className="pl-7 p-6 text-base"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
@@ -221,7 +254,7 @@ export function TransferFunds({ onComplete }: TransferFundsProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">
+        <Label htmlFor="description" className="text-base font-medium">
           {translate("accounts.description")} ({translate("accounts.optional")})
         </Label>
         <Input
@@ -229,19 +262,22 @@ export function TransferFunds({ onComplete }: TransferFundsProps) {
           placeholder={translate("accounts.transfer_description_placeholder")}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          className="p-6 text-base"
         />
       </div>
 
-      <div className="flex justify-end space-x-2 pt-4">
-        <Button variant="outline" onClick={onComplete}>
+      <div className="flex justify-end space-x-3 pt-6">
+        <Button variant="outline" onClick={onComplete} className="px-6 py-5 text-base font-medium">
           {translate("accounts.cancel")}
         </Button>
-        <Button onClick={handleTransfer} className="relative overflow-hidden group">
+        <Button
+          onClick={handleTransfer}
+          className="relative overflow-hidden group px-6 py-5 text-base font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+        >
           <span className="relative z-10">{translate("accounts.transfer_funds")}</span>
-          <span className="absolute inset-0 bg-primary-foreground/10 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></span>
+          <span className="absolute inset-0 bg-white/10 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></span>
         </Button>
       </div>
     </motion.div>
   )
 }
-

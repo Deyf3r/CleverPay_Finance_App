@@ -52,7 +52,7 @@ export default function EmergencyFundPage() {
         </div>
         <Button variant="outline" onClick={() => router.push("/dashboard")} className="gap-2">
           <Wallet className="h-4 w-4" />
-          {translate("Ver Dashboard")}
+          Dashboard
         </Button>
       </div>
 
@@ -263,10 +263,9 @@ export default function EmergencyFundPage() {
         </Card>
       </div>
 
-      <Button onClick={() => router.push("/dashboard")} variant="outline" className="mx-auto block">
-        {translate("Volver al Dashboard")}
+      <Button onClick={() => router.push("/ai-insights")} variant="outline" className="mx-auto block">
+        Volver a Insights
       </Button>
     </motion.div>
   )
 }
-

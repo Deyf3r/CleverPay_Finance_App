@@ -22,14 +22,14 @@ interface BudgetDialogProps {
 }
 
 export default function BudgetDialog({ open, onOpenChange }: BudgetDialogProps) {
-  const { formatCurrency } = useSettings()
+  const { formatCurrency, translate } = useSettings()
   const [step, setStep] = useState<"overview" | "detailed">("overview")
 
-  // Datos de ejemplo para el presupuesto
+  // Sample budget data
   const categories = [
-    { name: "Vivienda", percentage: 80.3, amount: 1200, suggested: 1080 },
-    { name: "Alimentación", percentage: 10.3, amount: 154.32, suggested: 138.89 },
-    { name: "Servicios", percentage: 7.0, amount: 104.99, suggested: 94.49 },
+    { name: translate("category.housing"), percentage: 80.3, amount: 1200, suggested: 1080 },
+    { name: translate("category.food"), percentage: 10.3, amount: 154.32, suggested: 138.89 },
+    { name: translate("category.utilities"), percentage: 7.0, amount: 104.99, suggested: 94.49 },
   ]
 
   return (
@@ -46,13 +46,13 @@ export default function BudgetDialog({ open, onOpenChange }: BudgetDialogProps) 
               <DialogTitle className="flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-purple-500" />
                 <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  {step === "overview" ? "Crear Presupuesto" : "Presupuesto Detallado"}
+                  {step === "overview" ? translate("budget.create_budget") : translate("budget.detailed_budget")}
                 </span>
               </DialogTitle>
               <DialogDescription>
                 {step === "overview"
-                  ? "Distribuye tus gastos de manera inteligente"
-                  : "Personaliza cada categoría de tu presupuesto"}
+                  ? translate("budget.distribute_expenses")
+                  : translate("budget.customize_categories")}
               </DialogDescription>
             </div>
           </div>
@@ -61,7 +61,7 @@ export default function BudgetDialog({ open, onOpenChange }: BudgetDialogProps) 
         {step === "overview" ? (
           <div className="space-y-6 py-4">
             <div className="space-y-4">
-              <h3 className="text-sm font-medium">Principales Categorías</h3>
+              <h3 className="text-sm font-medium">{translate("budget.main_categories")}</h3>
 
               {categories.map((category, index) => (
                 <div key={index} className="space-y-2">
@@ -91,7 +91,9 @@ export default function BudgetDialog({ open, onOpenChange }: BudgetDialogProps) 
                       indicatorClassName={index === 0 ? "bg-purple-500" : index === 1 ? "bg-blue-500" : "bg-green-500"}
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Sugerido: {formatCurrency(category.suggested)}</span>
+                      <span>
+                        {translate("budget.suggested")}: {formatCurrency(category.suggested)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -100,10 +102,10 @@ export default function BudgetDialog({ open, onOpenChange }: BudgetDialogProps) 
 
             <DialogFooter className="flex flex-col sm:flex-row gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)} className="sm:flex-1">
-                Cancelar
+                {translate("common.cancel")}
               </Button>
               <Button onClick={() => setStep("detailed")} className="sm:flex-1 gap-2">
-                Crear Presupuesto Detallado
+                {translate("budget.create_detailed")}
                 <ArrowLeft className="h-4 w-4 rotate-180" />
               </Button>
             </DialogFooter>
@@ -113,21 +115,21 @@ export default function BudgetDialog({ open, onOpenChange }: BudgetDialogProps) 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="income">Ingreso Mensual</Label>
+                  <Label htmlFor="income">{translate("budget.monthly_income")}</Label>
                   <Input id="income" defaultValue="1500" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="savings">Meta de Ahorro (%)</Label>
+                  <Label htmlFor="savings">{translate("budget.savings_goal_percent")}</Label>
                   <Input id="savings" defaultValue="20" />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Categorías de Presupuesto</Label>
+                  <Label>{translate("budget.categories")}</Label>
                   <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs">
                     <Plus className="h-3 w-3" />
-                    Añadir Categoría
+                    {translate("budget.add_category")}
                   </Button>
                 </div>
 
@@ -149,10 +151,10 @@ export default function BudgetDialog({ open, onOpenChange }: BudgetDialogProps) 
 
             <DialogFooter className="flex flex-col sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setStep("overview")} className="sm:flex-1">
-                Volver
+                {translate("common.back")}
               </Button>
               <Button onClick={() => onOpenChange(false)} className="sm:flex-1">
-                Guardar Presupuesto
+                {translate("budget.save_budget")}
               </Button>
             </DialogFooter>
           </div>
@@ -161,4 +163,3 @@ export default function BudgetDialog({ open, onOpenChange }: BudgetDialogProps) 
     </Dialog>
   )
 }
-

@@ -124,4 +124,3 @@ export function getPlanName(planId = "free"): string {
       return "Free"
   }
 }
-

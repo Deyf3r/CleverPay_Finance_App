@@ -121,4 +121,3 @@ export function AccountTransactions({ accountType }: AccountTransactionsProps) {
     </div>
   )
 }
-

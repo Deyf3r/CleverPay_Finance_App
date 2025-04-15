@@ -241,4 +241,3 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
     </div>
   )
 }
-

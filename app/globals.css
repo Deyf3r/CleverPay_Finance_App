@@ -123,7 +123,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Mejoras para el modo oscuro */
+/* Dark mode improvements */
 .dark {
   color-scheme: dark;
 }
@@ -133,6 +133,7 @@
   @apply bg-card text-card-foreground shadow-md border-border/30;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.6);
 }
 
 /* Efecto de vidrio para elementos elevados en modo oscuro */
@@ -170,6 +171,44 @@
 /* Estilo para divisores en modo oscuro */
 .dark .divider {
   @apply border-border/30;
+}
+
+/* Card header highlight for dark mode */
+.dark .card-header-highlight {
+  background: rgba(30, 41, 59, 0.4);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.2);
+}
+
+/* Improved dark mode for dialog and popover components */
+.dark .dialog-content,
+.dark .popover-content {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(51, 65, 85, 0.3);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Improved dark mode for tabs */
+.dark .tabs-list {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(51, 65, 85, 0.2);
+}
+
+.dark .tab-trigger[data-state="active"] {
+  background: rgba(15, 23, 42, 0.6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Improved dark mode for form elements */
+.dark .form-input,
+.dark .form-select {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+.dark .form-input:focus,
+.dark .form-select:focus {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
 /* Animaciones suaves para transiciones */
@@ -597,3 +636,39 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Symmetrical card heights */
+.equal-height-cards {
+  display: grid;
+  grid-auto-rows: 1fr;
+}
+
+.card-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .card-grid-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Consistent card padding */
+.consistent-card-padding {
+  padding: 1.25rem;
+}
+
+.consistent-card-header {
+  padding: 1.25rem 1.25rem 0.75rem 1.25rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.1);
+}
+
+.consistent-card-content {
+  padding: 1.25rem;
+}
+
+.consistent-card-footer {
+  padding: 0.75rem 1.25rem 1.25rem 1.25rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.1);
+}

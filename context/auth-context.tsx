@@ -3,14 +3,11 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import type { User } from "@prisma/client"
 
-export interface UserProfile {
-  id: string
-  name: string
-  email: string
+export interface UserProfile extends Omit<User, "password"> {
   avatar?: string
   provider?: "email" | "google" | "facebook"
-  subscriptionPlan?: string
   financialGoals?: {
     type: string
     target: number
@@ -52,63 +49,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Mock user data
-const mockUser: UserProfile = {
-  id: "user-1",
-  name: "Alex Johnson",
-  email: "alex@example.com",
-  avatar: "/placeholder.svg?height=200&width=200",
-  provider: "email",
-  subscriptionPlan: "premium",
-  financialGoals: [
-    {
-      type: "savings",
-      target: 10000,
-      current: 3500,
-      deadline: "2023-12-31",
-    },
-    {
-      type: "debt",
-      target: 5000,
-      current: 2000,
-      deadline: "2023-10-31",
-    },
-  ],
-  budgets: [
-    { category: "food", limit: 500 },
-    { category: "entertainment", limit: 200 },
-    { category: "transportation", limit: 300 },
-  ],
-  notificationPreferences: {
-    budgetAlerts: true,
-    weeklyReports: true,
-    unusualActivity: true,
-    tips: false,
-  },
-  securitySettings: {
-    twoFactorEnabled: false,
-    lastPasswordChange: "2023-01-15",
-  },
-}
-
-// Mock users database
-const mockUsers = [
-  {
-    id: "user-1",
-    name: "Alex Johnson",
-    email: "alex@example.com",
-    password: "password123", // In a real app, this would be hashed
-    avatar: "/placeholder.svg?height=200&width=200",
-  },
-  {
-    id: "user-2",
-    name: "Demo User",
-    email: "demo@example.com",
-    password: "demo123", // In a real app, this would be hashed
-    avatar: "/placeholder.svg?height=200&width=200",
-  },
-]
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -116,134 +56,119 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user is logged in on mount
   useEffect(() => {
-    const checkAuth = () => {
-      const storedUser = localStorage.getItem("finance_app_user")
-      if (storedUser) {
-        setUser(JSON.parse(storedUser))
-      } else {
-        // Auto-login for development purposes - comment this out for production
-        // setUser(mockUser)
-        // localStorage.setItem("finance_app_user", JSON.stringify(mockUser))
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session")
+        if (response.ok) {
+          const data = await response.json()
+          if (data.user) {
+            setUser({
+              ...data.user,
+              avatar: data.user.image || "/placeholder.svg?height=200&width=200",
+              notificationPreferences: {
+                budgetAlerts: true,
+                weeklyReports: true,
+                unusualActivity: true,
+                tips: false,
+              },
+              securitySettings: {
+                twoFactorEnabled: false,
+                lastPasswordChange: new Date().toISOString(),
+              },
+            })
+          }
+        }
+      } catch (error) {
+        console.error("Error checking authentication:", error)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
-    // Simulate network delay
-    setTimeout(checkAuth, 500)
+    checkAuth()
   }, [])
 
   const login = async (email: string, password: string) => {
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Find user in mock database
-    const foundUser = mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
-
-    if (foundUser) {
-      // Create user profile from found user
-      const userProfile: UserProfile = {
-        id: foundUser.id,
-        name: foundUser.name,
-        email: foundUser.email,
-        avatar: foundUser.avatar,
-        provider: "email",
-        // Add default values for other properties
-        notificationPreferences: {
-          budgetAlerts: true,
-          weeklyReports: true,
-          unusualActivity: true,
-          tips: false,
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        securitySettings: {
-          twoFactorEnabled: false,
-          lastPasswordChange: new Date().toISOString(),
-        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setUser({
+          ...data.user,
+          avatar: data.user.image || "/placeholder.svg?height=200&width=200",
+          notificationPreferences: {
+            budgetAlerts: true,
+            weeklyReports: true,
+            unusualActivity: true,
+            tips: false,
+          },
+          securitySettings: {
+            twoFactorEnabled: false,
+            lastPasswordChange: new Date().toISOString(),
+          },
+        })
+        return { success: true }
+      } else {
+        return { success: false, message: data.message || "Credenciales inválidas. Por favor, inténtalo de nuevo." }
       }
-
-      setUser(userProfile)
-      localStorage.setItem("finance_app_user", JSON.stringify(userProfile))
+    } catch (error) {
+      console.error("Login error:", error)
+      return { success: false, message: "Ocurrió un error inesperado. Por favor, inténtalo de nuevo." }
+    } finally {
       setIsLoading(false)
-      return { success: true }
     }
-
-    setIsLoading(false)
-    return { success: false, message: "Credenciales inválidas. Por favor, inténtalo de nuevo." }
   }
 
   const loginWithProvider = async (provider: "google" | "facebook") => {
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // In a real app, this would authenticate with the provider
-    // For demo purposes, we'll create a mock user
-    const providerUser: UserProfile = {
-      id: `${provider}-user-1`,
-      name: provider === "google" ? "Google User" : "Facebook User",
-      email: `${provider}user@example.com`,
-      avatar: "/placeholder.svg?height=200&width=200",
-      provider: provider,
-      notificationPreferences: {
-        budgetAlerts: true,
-        weeklyReports: true,
-        unusualActivity: true,
-        tips: false,
-      },
-      securitySettings: {
-        twoFactorEnabled: false,
-        lastPasswordChange: new Date().toISOString(),
-      },
+    try {
+      // Redirect to provider auth page
+      window.location.href = `/api/auth/${provider}`
+      return { success: true }
+    } catch (error) {
+      console.error(`${provider} login error:`, error)
+      return { success: false, message: `Error al iniciar sesión con ${provider}. Por favor, inténtalo de nuevo.` }
+    } finally {
+      setIsLoading(false)
     }
-
-    setUser(providerUser)
-    localStorage.setItem("finance_app_user", JSON.stringify(providerUser))
-    setIsLoading(false)
-    return { success: true }
   }
 
   const register = async (name: string, email: string, password: string, subscriptionPlan = "free") => {
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password, subscriptionPlan }),
+      })
 
-    // Check if user already exists
-    const userExists = mockUsers.some((u) => u.email.toLowerCase() === email.toLowerCase())
+      const data = await response.json()
 
-    if (userExists) {
+      if (response.ok) {
+        return { success: true }
+      } else {
+        return { success: false, message: data.message || "Error al registrar. Por favor, inténtalo de nuevo." }
+      }
+    } catch (error) {
+      console.error("Registration error:", error)
+      return { success: false, message: "Ocurrió un error inesperado. Por favor, inténtalo de nuevo." }
+    } finally {
       setIsLoading(false)
-      return { success: false, message: "Este correo electrónico ya está registrado." }
     }
-
-    // Create new user
-    const newUser: UserProfile = {
-      id: `user-${Date.now()}`,
-      name,
-      email,
-      avatar: "/placeholder.svg?height=200&width=200",
-      provider: "email",
-      subscriptionPlan,
-      notificationPreferences: {
-        budgetAlerts: true,
-        weeklyReports: true,
-        unusualActivity: true,
-        tips: false,
-      },
-      securitySettings: {
-        twoFactorEnabled: false,
-        lastPasswordChange: new Date().toISOString(),
-      },
-    }
-
-    // In a real app, we would save this to a database
-    // For demo purposes, we'll just set the user
-    setUser(newUser)
-    localStorage.setItem("finance_app_user", JSON.stringify(newUser))
-    setIsLoading(false)
-    return { success: true }
   }
 
   const logout = async () => {
@@ -251,39 +176,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const confirmed = window.confirm("¿Estás seguro de que deseas cerrar sesión?")
 
     if (confirmed) {
-      setUser(null)
-      localStorage.removeItem("finance_app_user")
-      router.push("/login")
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+        })
+        setUser(null)
+        router.push("/login")
+      } catch (error) {
+        console.error("Logout error:", error)
+      }
     }
   }
 
   const resetPassword = async (email: string) => {
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      })
 
-    // Check if user exists
-    const userExists = mockUsers.some((u) => u.email.toLowerCase() === email.toLowerCase())
+      const data = await response.json()
 
-    if (!userExists) {
+      if (response.ok) {
+        return {
+          success: true,
+          message: "Te hemos enviado un correo electrónico con instrucciones para restablecer tu contraseña.",
+        }
+      } else {
+        return {
+          success: false,
+          message: data.message || "Error al restablecer la contraseña. Por favor, inténtalo de nuevo.",
+        }
+      }
+    } catch (error) {
+      console.error("Reset password error:", error)
+      return { success: false, message: "Ocurrió un error inesperado. Por favor, inténtalo de nuevo." }
+    } finally {
       setIsLoading(false)
-      return { success: false, message: "No encontramos una cuenta con ese correo electrónico." }
-    }
-
-    // In a real app, we would send a password reset email
-    setIsLoading(false)
-    return {
-      success: true,
-      message: "Te hemos enviado un correo electrónico con instrucciones para restablecer tu contraseña.",
     }
   }
 
-  const updateProfile = (data: Partial<UserProfile>) => {
+  const updateProfile = async (data: Partial<UserProfile>) => {
     if (user) {
-      const updatedUser = { ...user, ...data }
-      setUser(updatedUser)
-      localStorage.setItem("finance_app_user", JSON.stringify(updatedUser))
+      try {
+        const response = await fetch("/api/auth/update-profile", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        })
+
+        if (response.ok) {
+          const updatedUser = { ...user, ...data }
+          setUser(updatedUser)
+        }
+      } catch (error) {
+        console.error("Update profile error:", error)
+      }
     }
   }
 
@@ -313,4 +268,3 @@ export const useAuth = () => {
   }
   return context
 }
-

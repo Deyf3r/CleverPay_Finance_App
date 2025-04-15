@@ -1,160 +1,472 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
-import { PieChart, TrendingUp, Shield, BadgeDollarSign, CreditCard } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { PieChart, TrendingUp, ShieldCheck, Wallet, CreditCard, ChevronRight, LineChart } from "lucide-react"
 import { useSettings } from "@/context/settings-context"
-import BudgetDialog from "@/components/budget-dialog"
-import EmergencyFundDialog from "@/components/emergency-fund-dialog"
-import DebtReductionDialog from "@/components/debt-reduction-dialog"
-import AutomateSavingsDialog from "@/components/automate-savings-dialog"
+import { motion } from "framer-motion"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export function FinancialAdviceHub() {
+  const { translate, formatCurrency } = useSettings()
   const router = useRouter()
-  const { translate } = useSettings()
-  const [budgetDialogOpen, setBudgetDialogOpen] = useState(false)
-  const [emergencyFundDialogOpen, setEmergencyFundDialogOpen] = useState(false)
-  const [debtReductionDialogOpen, setDebtReductionDialogOpen] = useState(false)
-  const [automateSavingsOpen, setAutomateSavingsOpen] = useState(false)
+  const [activeCard, setActiveCard] = useState<string | null>(null)
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.5,
+        ease: "easeOut",
+      },
+    }),
+    hover: {
+      scale: 1.03,
+      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      transition: {
+        duration: 0.2,
+      },
+    },
+  }
+
+  const navigateTo = (path: string) => {
+    router.push(path)
+  }
 
   return (
-    <>
-      <h3 className="text-lg font-medium mb-4">Consejos Financieros</h3>
+    <div className="space-y-8">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex items-center gap-3 mb-8"
+      >
+        <div className="p-3 rounded-full bg-gradient-to-r from-purple-500/20 to-indigo-500/20">
+          <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+        </div>
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+          {translate("tips.financial_tips")}
+        </h2>
+      </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="overflow-hidden border-indigo-100 dark:border-indigo-900/30 hover:shadow-md transition-shadow">
-          <CardContent className="p-0">
-            <div className="p-6">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-full">
-                  <PieChart className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <motion.div
+          custom={0}
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
+          whileHover="hover"
+          onHoverStart={() => setActiveCard("budget")}
+          onHoverEnd={() => setActiveCard(null)}
+        >
+          <Card
+            className="h-full overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/5 dark:to-indigo-900/5 cursor-pointer"
+            onClick={() => navigateTo("/budget-planner")}
+          >
+            <CardHeader className="pb-3 border-b border-blue-100/50 dark:border-blue-900/10 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 dark:from-blue-900/10 dark:to-indigo-900/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-gradient-to-r from-blue-500/20 to-indigo-500/20">
+                  <PieChart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">Diversifica tus Gastos</h3>
-                  <p className="text-sm text-muted-foreground">Estás gastando demasiado en una sola categoría</p>
+                  <CardTitle className="text-lg">{translate("tips.diversify_spending")}</CardTitle>
+                  <CardDescription>{translate("tips.budget_explanation")}</CardDescription>
                 </div>
               </div>
-              <p className="text-sm">
-                El 80% de tus gastos están en vivienda. Considera redistribuir tu presupuesto para tener más
-                flexibilidad financiera.
-              </p>
-            </div>
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 p-4 border-t border-indigo-100 dark:border-indigo-900/30">
-              <Button variant="outline" className="w-full" onClick={() => setBudgetDialogOpen(true)}>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("category.housing")}</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800/30"
+                  >
+                    30%
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("category.food")}</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800/30"
+                  >
+                    15%
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("category.transportation")}</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800/30"
+                  >
+                    10%
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("category.entertainment")}</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800/30"
+                  >
+                    5%
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t border-blue-100/50 dark:border-blue-900/10 pt-3">
+              <Button
+                className={`w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white group ${activeCard === "budget" ? "translate-y-0" : ""}`}
+              >
                 Crear Presupuesto
+                <ChevronRight
+                  className={`ml-2 h-4 w-4 transition-transform duration-300 ${activeCard === "budget" ? "translate-x-1" : ""}`}
+                />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardFooter>
+          </Card>
+        </motion.div>
 
-        <Card className="overflow-hidden border-green-100 dark:border-green-900/30 hover:shadow-md transition-shadow">
-          <CardContent className="p-0">
-            <div className="p-6">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-full">
-                  <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <motion.div
+          custom={1}
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
+          whileHover="hover"
+          onHoverStart={() => setActiveCard("investment")}
+          onHoverEnd={() => setActiveCard(null)}
+        >
+          <Card
+            className="h-full overflow-hidden border-0 shadow-lg bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-900/5 dark:to-teal-900/5 cursor-pointer"
+            onClick={() => navigateTo("/investments")}
+          >
+            <CardHeader className="pb-3 border-b border-emerald-100/50 dark:border-emerald-900/10 bg-gradient-to-r from-emerald-50/80 to-teal-50/80 dark:from-emerald-900/10 dark:to-teal-900/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20">
+                  <LineChart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">Oportunidades de Inversión</h3>
-                  <p className="text-sm text-muted-foreground">Tienes fondos que podrían generar rendimientos</p>
+                  <CardTitle className="text-lg">{translate("tips.investment_opportunity")}</CardTitle>
+                  <CardDescription>{translate("tips.investment_explanation")}</CardDescription>
                 </div>
               </div>
-              <p className="text-sm">
-                Con tus ahorros actuales, podrías considerar inversiones de bajo riesgo que generen mejores rendimientos
-                que una cuenta de ahorros tradicional.
-              </p>
-            </div>
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 p-4 border-t border-green-100 dark:border-green-900/30">
-              <Button variant="outline" className="w-full" onClick={() => router.push("/investments")}>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("ai.current_savings")}</span>
+                  <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(5000)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("ai.recommended_amount")}</span>
+                  <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(200)} / {translate("ai.per_month")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("ai.investment_type")}</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
+                  >
+                    {translate("ai.index_fund")}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("ai.time_horizon")}</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
+                  >
+                    {translate("ai.long_term")}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t border-emerald-100/50 dark:border-emerald-900/10 pt-3">
+              <Button
+                className={`w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white group ${activeCard === "investment" ? "translate-y-0" : ""}`}
+              >
                 Explorar Inversiones
+                <ChevronRight
+                  className={`ml-2 h-4 w-4 transition-transform duration-300 ${activeCard === "investment" ? "translate-x-1" : ""}`}
+                />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardFooter>
+          </Card>
+        </motion.div>
 
-        <Card className="overflow-hidden border-amber-100 dark:border-amber-900/30 hover:shadow-md transition-shadow">
-          <CardContent className="p-0">
-            <div className="p-6">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-full">
-                  <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        <motion.div
+          custom={2}
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
+          whileHover="hover"
+          onHoverStart={() => setActiveCard("emergency")}
+          onHoverEnd={() => setActiveCard(null)}
+        >
+          <Card
+            className="h-full overflow-hidden border-0 shadow-lg bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-900/5 dark:to-orange-900/5 cursor-pointer"
+            onClick={() => navigateTo("/emergency-fund")}
+          >
+            <CardHeader className="pb-3 border-b border-amber-100/50 dark:border-amber-900/10 bg-gradient-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-900/10 dark:to-orange-900/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20">
+                  <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">Fondo de Emergencia</h3>
-                  <p className="text-sm text-muted-foreground">No tienes un fondo para imprevistos</p>
+                  <CardTitle className="text-lg">{translate("tips.emergency_fund")}</CardTitle>
+                  <CardDescription>{translate("tips.emergency_explanation")}</CardDescription>
                 </div>
               </div>
-              <p className="text-sm">
-                Se recomienda tener al menos 3-6 meses de gastos guardados para emergencias. Actualmente no tienes
-                ahorros para este propósito.
-              </p>
-            </div>
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 p-4 border-t border-amber-100 dark:border-amber-900/30">
-              <Button variant="outline" className="w-full" onClick={() => setEmergencyFundDialogOpen(true)}>
-                Crear Fondo de Emergencia
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("dashboard.monthly_expenses")}</span>
+                  <span className="font-medium text-amber-600 dark:text-amber-400">{formatCurrency(2500)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("ai.recommended_amount")}</span>
+                  <span className="font-medium text-amber-600 dark:text-amber-400">
+                    {formatCurrency(7500)} - {formatCurrency(15000)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("ai.current_savings")}</span>
+                  <span className="font-medium text-rose-600 dark:text-rose-400">{formatCurrency(0)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("ai.goal_timeline")}</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800/30"
+                  >
+                    6-12 {translate("ai.months")}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t border-amber-100/50 dark:border-amber-900/10 pt-3">
+              <Button
+                className={`w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white group ${activeCard === "emergency" ? "translate-y-0" : ""}`}
+              >
+                Comenzar a Ahorrar
+                <ChevronRight
+                  className={`ml-2 h-4 w-4 transition-transform duration-300 ${activeCard === "emergency" ? "translate-x-1" : ""}`}
+                />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardFooter>
+          </Card>
+        </motion.div>
 
-        <Card className="overflow-hidden border-blue-100 dark:border-blue-900/30 hover:shadow-md transition-shadow">
-          <CardContent className="p-0">
-            <div className="p-6">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full">
-                  <BadgeDollarSign className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <motion.div
+          custom={3}
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
+          whileHover="hover"
+          onHoverStart={() => setActiveCard("automate")}
+          onHoverEnd={() => setActiveCard(null)}
+        >
+          <Card
+            className="h-full overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50/50 to-violet-50/50 dark:from-purple-900/5 dark:to-violet-900/5 cursor-pointer"
+            onClick={() => navigateTo("/automate-savings")}
+          >
+            <CardHeader className="pb-3 border-b border-purple-100/50 dark:border-purple-900/10 bg-gradient-to-r from-purple-50/80 to-violet-50/80 dark:from-purple-900/10 dark:to-violet-900/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-gradient-to-r from-purple-500/20 to-violet-500/20">
+                  <Wallet className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">Automatiza tus Ahorros</h3>
-                  <p className="text-sm text-muted-foreground">Configura transferencias automáticas</p>
+                  <CardTitle className="text-lg">{translate("tips.automate_savings")}</CardTitle>
+                  <CardDescription>{translate("tips.automation_explanation")}</CardDescription>
                 </div>
               </div>
-              <p className="text-sm">
-                Automatizar tus ahorros te ayudará a alcanzar tus metas financieras más rápido. Configura transferencias
-                automáticas a tus cuentas de ahorro.
-              </p>
-            </div>
-            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-4 border-t border-blue-100 dark:border-blue-900/30">
-              <Button variant="outline" className="w-full" onClick={() => setAutomateSavingsOpen(true)}>
-                Configurar Ahorros Automáticos
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden border-rose-100 dark:border-rose-900/30 hover:shadow-md transition-shadow">
-          <CardContent className="p-0">
-            <div className="p-6">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="p-2 bg-rose-100 dark:bg-rose-900/50 rounded-full">
-                  <CreditCard className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("dashboard.income")}</span>
+                  <span className="font-medium text-purple-600 dark:text-purple-400">
+                    {formatCurrency(3500)} / {translate("ai.per_month")}
+                  </span>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Reduce tu Deuda</h3>
-                  <p className="text-sm text-muted-foreground">Prioriza pagar deudas de alto interés</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("ai.recommended_amount")}</span>
+                  <span className="font-medium text-purple-600 dark:text-purple-400">
+                    {formatCurrency(350)} / {translate("ai.per_month")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("budget.savings_rate")}</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400 border-purple-200 dark:border-purple-800/30"
+                  >
+                    10%
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{translate("accounts.from_account")}</span>
+                  <span className="font-medium">{translate("account.checking")}</span>
                 </div>
               </div>
-              <p className="text-sm">
-                Tu tarjeta de crédito tiene un interés del 18%. Prioriza pagar esta deuda antes que otras con menor
-                interés para ahorrar dinero a largo plazo.
-              </p>
-            </div>
-            <div className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-pink-950/30 p-4 border-t border-rose-100 dark:border-rose-900/30">
-              <Button variant="outline" className="w-full" onClick={() => setDebtReductionDialogOpen(true)}>
-                Crear Plan de Reducción de Deuda
+            </CardContent>
+            <CardFooter className="border-t border-purple-100/50 dark:border-purple-900/10 pt-3">
+              <Button
+                className={`w-full bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white group ${activeCard === "automate" ? "translate-y-0" : ""}`}
+              >
+                Configurar Automatización
+                <ChevronRight
+                  className={`ml-2 h-4 w-4 transition-transform duration-300 ${activeCard === "automate" ? "translate-x-1" : ""}`}
+                />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardFooter>
+          </Card>
+        </motion.div>
       </div>
 
-      <BudgetDialog open={budgetDialogOpen} onOpenChange={setBudgetDialogOpen} />
-      <EmergencyFundDialog open={emergencyFundDialogOpen} onOpenChange={setEmergencyFundDialogOpen} />
-      <DebtReductionDialog open={debtReductionDialogOpen} onOpenChange={setDebtReductionDialogOpen} />
-      <AutomateSavingsDialog open={automateSavingsOpen} onOpenChange={setAutomateSavingsOpen} />
-    </>
+      <motion.div
+        custom={4}
+        initial="hidden"
+        animate="visible"
+        variants={cardVariants}
+        whileHover="hover"
+        onHoverStart={() => setActiveCard("debt")}
+        onHoverEnd={() => setActiveCard(null)}
+      >
+        <Card
+          className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-rose-50/50 to-pink-50/50 dark:from-rose-900/5 dark:to-pink-900/5 cursor-pointer"
+          onClick={() => navigateTo("/debt-planner")}
+        >
+          <CardHeader className="pb-3 border-b border-rose-100/50 dark:border-rose-900/10 bg-gradient-to-r from-rose-50/80 to-pink-50/80 dark:from-rose-900/10 dark:to-pink-900/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-gradient-to-r from-rose-500/20 to-pink-500/20">
+                <CreditCard className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{translate("tips.reduce_debt")}</CardTitle>
+                <CardDescription>{translate("tips.debt_explanation")}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="font-medium text-base">{translate("debt.your_debts")}</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className="bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 border-rose-200 dark:border-rose-800/30"
+                    >
+                      {translate("debt.high_priority")}
+                    </Badge>
+                    <span className="text-sm font-medium">{translate("debt.credit_card")}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-medium text-rose-600 dark:text-rose-400">{formatCurrency(3500)}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                      18% {translate("debt.interest_rate")}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className="bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800/30"
+                    >
+                      {translate("debt.medium_priority")}
+                    </Badge>
+                    <span className="text-sm font-medium">{translate("debt.personal_loan")}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-medium text-amber-600 dark:text-amber-400">{formatCurrency(5000)}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                      8% {translate("debt.interest_rate")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-medium text-base">{translate("debt.steps_to_reduce")}</h3>
+                <div className="space-y-5">
+                  <div>
+                    <div className="flex items-start gap-3">
+                      <div className="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mt-0.5 flex-shrink-0">
+                        1
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm mb-1">{translate("debt.prioritize")}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          {translate("debt.focus_highest_interest")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-start gap-3">
+                      <div className="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mt-0.5 flex-shrink-0">
+                        2
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm mb-1">{translate("debt.minimum_payments")}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          {translate("debt.make_minimum")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-start gap-3">
+                      <div className="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mt-0.5 flex-shrink-0">
+                        3
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm mb-1">{translate("debt.extra_payments")}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          {translate("debt.allocate_extra")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-start gap-3">
+                      <div className="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mt-0.5 flex-shrink-0">
+                        4
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm mb-1">{translate("debt.move_to_next")}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          {translate("debt.after_paying_first")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="border-t border-rose-100/50 dark:border-rose-900/10 pt-3">
+            <Button
+              className={`w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white group ${activeCard === "debt" ? "translate-y-0" : ""}`}
+            >
+              Crear Estrategia
+              <ChevronRight
+                className={`ml-2 h-4 w-4 transition-transform duration-300 ${activeCard === "debt" ? "translate-x-1" : ""}`}
+              />
+            </Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    </div>
   )
 }
-

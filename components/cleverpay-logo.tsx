@@ -39,4 +39,3 @@ export function CleverPayLogo({
     </Link>
   )
 }
-

@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 
-export default function NavBar() {
+export function NavBar() {
   const { translate } = useSettings()
   const { user, isAuthenticated, logout } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -269,3 +269,4 @@ export default function NavBar() {
   )
 }
 
+export default NavBar

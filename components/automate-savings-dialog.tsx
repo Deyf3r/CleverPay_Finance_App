@@ -130,4 +130,3 @@ export default function AutomateSavingsDialog({ open, onOpenChange }: AutomateSa
     </Dialog>
   )
 }
-

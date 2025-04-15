@@ -25,10 +25,17 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/context/auth-context"
-import * as faceapi from "face-api.js"
+import { motion } from "framer-motion"
 
-// Añadir importación para el componente de transición
-import { motion, AnimatePresence } from "framer-motion"
+// Añadir la declaración de tipo para window.faceapi
+// Al principio del archivo, después de las importaciones:
+
+// Extender la interfaz Window para incluir faceapi
+declare global {
+  interface Window {
+    faceapi: any
+  }
+}
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
@@ -104,6 +111,9 @@ export default function RegisterPage() {
         setIsLoadingModels(true)
         setDebugInfo("Iniciando carga de modelos...")
 
+        // Importación dinámica de face-api.js
+        const faceapi = await import("face-api.js")
+
         // Usar CDN más confiable para los modelos
         const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model"
 
@@ -113,6 +123,9 @@ export default function RegisterPage() {
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         ])
+
+        // Guardar la referencia a faceapi para usarla en otras funciones
+        window.faceapi = faceapi
 
         modelsLoadedRef.current = true
         setDebugInfo("Modelos cargados correctamente")
@@ -285,16 +298,17 @@ export default function RegisterPage() {
       return
     }
 
-    if (!modelsLoadedRef.current) {
+    if (!modelsLoadedRef.current || !window.faceapi) {
       setDebugInfo("No se puede iniciar detección: modelos no cargados")
       setCameraError("Los modelos de detección facial no están cargados. Intenta recargar la página.")
       return
     }
 
+    const faceapi = window.faceapi
     setDebugInfo("Iniciando bucle de detección facial...")
 
     const detectFace = async () => {
-      if (!videoRef.current || !canvasRef.current || !isCameraActive || faceReadyForRegistration) {
+      if (!videoRef.current || !canvasRef.current || !isCameraActive || faceReadyForRegistration || !faceapi) {
         return
       }
 
@@ -628,27 +642,27 @@ export default function RegisterPage() {
       setIsLoading(true)
       setDebugInfo("Iniciando registro de usuario...")
 
-      // Create biometric data object
-      const biometricData = faceDescriptor
-        ? {
-            hasFaceRegistration: true,
-            faceDescriptor: Array.from(faceDescriptor),
-          }
-        : {
-            hasFaceRegistration: false,
-          }
+      // Register user with the new system
+      const result = await register(name, email, password)
 
-      // Register user with biometric data
-      await register(name, email, password, undefined, biometricData)
-      setDebugInfo("Usuario registrado correctamente")
+      if (result.success) {
+        setDebugInfo("Usuario registrado correctamente")
 
-      toast({
-        title: "Registro exitoso",
-        description: "Tu cuenta ha sido creada correctamente",
-      })
+        toast({
+          title: "Registro exitoso",
+          description: "Tu cuenta ha sido creada correctamente",
+        })
 
-      // Redirect to login
-      router.push("/login")
+        // Redirect to login
+        router.push("/login")
+      } else {
+        setDebugInfo(`Error en registro: ${result.message}`)
+        toast({
+          title: "Error de registro",
+          description: result.message || "No se pudo completar el registro. Inténtalo de nuevo.",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       console.error("Registration error:", error)
       setDebugInfo(`Error en registro: ${error instanceof Error ? error.message : String(error)}`)
@@ -670,473 +684,459 @@ export default function RegisterPage() {
       exit: { opacity: 0, x: 20 },
     }
 
+    // Renderizamos directamente el contenido sin AnimatePresence
     return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={step}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          variants={variants}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
-        >
-          {step === 1 && (
-            <>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre completo</Label>
-                  <div className="relative">
-                    <Input
-                      id="name"
-                      placeholder="Ingresa tu nombre completo"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Correo electrónico</Label>
-                  <div className="relative">
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Ingresa tu correo electrónico"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  </div>
+      <motion.div
+        key={step}
+        initial="hidden"
+        animate="visible"
+        variants={variants}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+      >
+        {step === 1 && (
+          <>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nombre completo</Label>
+                <div className="relative">
+                  <Input
+                    id="name"
+                    placeholder="Ingresa tu nombre completo"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 </div>
               </div>
 
-              <div className="flex justify-between mt-6">
-                <Button variant="outline" asChild>
-                  <Link href="/login">Volver</Link>
-                </Button>
-                <Button onClick={() => handleRegister(new Event("submit") as unknown as React.FormEvent)}>
-                  Continuar
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="email">Correo electrónico</Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Ingresa tu correo electrónico"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                </div>
               </div>
-            </>
-          )}
+            </div>
 
-          {step === 2 && (
-            <>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password">Contraseña</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Crea una contraseña segura"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10"
-                      required
-                    />
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" asChild>
+                <Link href="/login">Volver</Link>
+              </Button>
+              <Button onClick={() => handleRegister(new Event("submit") as unknown as React.FormEvent)}>
+                Continuar
+              </Button>
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Crea una contraseña segura"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10"
+                    required
+                  />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+
+                {password && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden">
+                        <motion.div
+                          className={`h-full ${
+                            passwordStrength <= 2
+                              ? "bg-red-500"
+                              : passwordStrength <= 4
+                                ? "bg-yellow-500"
+                                : "bg-green-500"
+                          }`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(passwordStrength / 5) * 100}%` }}
+                          transition={{ duration: 0.5 }}
+                        />
+                      </div>
+                      <span className="text-sm">{passwordFeedback}</span>
+                    </div>
+                    <ul className="text-xs text-gray-500 mt-2 space-y-1">
+                      <li className={password.length >= 8 ? "text-green-500" : ""}>• Mínimo 8 caracteres</li>
+                      <li className={/\d/.test(password) ? "text-green-500" : ""}>• Al menos un número</li>
+                      <li className={/[A-Z]/.test(password) ? "text-green-500" : ""}>• Al menos una mayúscula</li>
+                      <li className={/[^A-Za-z0-9]/.test(password) ? "text-green-500" : ""}>
+                        • Al menos un carácter especial
+                      </li>
+                    </ul>
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirma tu contraseña"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-10 pr-10"
+                    required
+                  />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+
+                {password && confirmPassword && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex items-center gap-2 mt-2"
+                  >
+                    {password === confirmPassword ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-green-500">Las contraseñas coinciden</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm text-red-500">Las contraseñas no coinciden</span>
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" onClick={() => setStep(1)}>
+                Atrás
+              </Button>
+              <Button onClick={() => handleRegister(new Event("submit") as unknown as React.FormEvent)}>
+                Continuar
+              </Button>
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <div className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-gray-500">
+                  Para mayor seguridad, registra tu rostro para el inicio de sesión biométrico
+                </p>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="relative mx-auto w-full max-w-[320px] h-[240px] bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-lg overflow-hidden shadow-lg"
+              >
+                {isLoadingModels ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center"
+                  >
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-full bg-primary/20"></div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-3">
+                      Cargando modelos de reconocimiento...
+                    </p>
+                  </motion.div>
+                ) : cameraError ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-red-50 dark:bg-red-900/20"
+                  >
+                    <AlertCircle className="h-10 w-10 text-red-500 mb-2" />
+                    <p className="text-sm text-center text-gray-700 dark:text-gray-200">{cameraError}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 bg-white dark:bg-gray-800"
+                      onClick={() => {
+                        setCameraError(null)
+                        startCamera()
+                      }}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <Eye className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-
-                  {password && (
+                      <RefreshCw className="h-4 w-4 mr-2" /> Reintentar
+                    </Button>
+                  </motion.div>
+                ) : isFaceRegistered ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20"
+                  >
                     <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      transition={{ duration: 0.3 }}
-                      className="mt-2"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                      className="rounded-full bg-green-100 dark:bg-green-900/50 p-3 mb-2"
                     >
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden">
+                      <CheckCircle className="h-10 w-10 text-green-500" />
+                    </motion.div>
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-sm font-medium text-green-700 dark:text-green-400"
+                    >
+                      ¡Rostro registrado con éxito!
+                    </motion.p>
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="text-xs text-green-600 dark:text-green-500 mt-1"
+                    >
+                      Podrás usar tu rostro para iniciar sesión
+                    </motion.p>
+                  </motion.div>
+                ) : faceReadyForRegistration ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center"
+                  >
+                    {capturedImageData ? (
+                      <img
+                        src={capturedImageData || "/placeholder.svg"}
+                        alt="Rostro capturado"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="bg-gray-200 dark:bg-gray-700 w-full h-full"></div>
+                    )}
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center p-4"
+                    >
+                      <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg max-w-[90%] text-center"
+                      >
+                        <ThumbsUp className="h-10 w-10 text-green-500 mx-auto mb-2" />
+                        <h3 className="text-sm font-medium mb-2">¡Rostro capturado correctamente!</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                          Presiona el botón para confirmar el registro biométrico
+                        </p>
+                        <div className="flex gap-2 justify-center">
+                          <Button variant="outline" size="sm" onClick={cancelFaceRegistration}>
+                            Volver a intentar
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={confirmFaceRegistration}
+                            className="bg-green-500 hover:bg-green-600"
+                          >
+                            Confirmar registro
+                          </Button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  </motion.div>
+                ) : isCameraActive ? (
+                  <>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      width={320}
+                      height={240}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <canvas ref={canvasRef} width={320} height={240} className="absolute inset-0 w-full h-full" />
+
+                    {/* Overlay con instrucciones */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="absolute top-2 left-0 right-0 flex justify-center"
+                    >
+                      <span className="text-xs font-medium px-3 py-1 rounded-full bg-black/50 text-white backdrop-blur-sm">
+                        {isFaceDetected ? "Mantén la posición" : "Centra tu rostro en el óvalo"}
+                      </span>
+                    </motion.div>
+
+                    {/* Indicador de progreso */}
+                    {isFaceDetected && registrationProgress > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute bottom-8 left-4 right-4"
+                      >
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
                           <motion.div
-                            className={`h-full ${
-                              passwordStrength <= 2
-                                ? "bg-red-500"
-                                : passwordStrength <= 4
-                                  ? "bg-yellow-500"
-                                  : "bg-green-500"
-                            }`}
                             initial={{ width: 0 }}
-                            animate={{ width: `${(passwordStrength / 5) * 100}%` }}
-                            transition={{ duration: 0.5 }}
+                            animate={{ width: `${registrationProgress}%` }}
+                            className="bg-gradient-to-r from-blue-500 to-primary h-2.5 rounded-full transition-all duration-300"
                           />
                         </div>
-                        <span className="text-sm">{passwordFeedback}</span>
-                      </div>
-                      <ul className="text-xs text-gray-500 mt-2 space-y-1">
-                        <li className={password.length >= 8 ? "text-green-500" : ""}>• Mínimo 8 caracteres</li>
-                        <li className={/\d/.test(password) ? "text-green-500" : ""}>• Al menos un número</li>
-                        <li className={/[A-Z]/.test(password) ? "text-green-500" : ""}>• Al menos una mayúscula</li>
-                        <li className={/[^A-Za-z0-9]/.test(password) ? "text-green-500" : ""}>
-                          • Al menos un carácter especial
-                        </li>
-                      </ul>
-                    </motion.div>
-                  )}
-                </div>
+                        <p className="text-xs text-center mt-1 font-medium text-white text-shadow">
+                          {registrationProgress < 100 ? `Analizando: ${registrationProgress}%` : "Procesando..."}
+                        </p>
+                      </motion.div>
+                    )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirma tu contraseña"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10 pr-10"
-                      required
-                    />
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <Eye className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-
-                  {password && confirmPassword && (
+                    {/* Indicador de estado */}
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex items-center gap-2 mt-2"
+                      transition={{ delay: 0.4 }}
+                      className="absolute bottom-2 left-0 right-0 flex justify-center"
                     >
-                      {password === confirmPassword ? (
-                        <>
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                          <span className="text-sm text-green-500">Las contraseñas coinciden</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="h-4 w-4 text-red-500" />
-                          <span className="text-sm text-red-500">Las contraseñas no coinciden</span>
-                        </>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-between mt-6">
-                <Button variant="outline" onClick={() => setStep(1)}>
-                  Atrás
-                </Button>
-                <Button onClick={() => handleRegister(new Event("submit") as unknown as React.FormEvent)}>
-                  Continuar
-                </Button>
-              </div>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <div className="space-y-4">
-                <div className="text-center mb-4">
-                  <p className="text-sm text-gray-500">
-                    Para mayor seguridad, registra tu rostro para el inicio de sesión biométrico
-                  </p>
-                </div>
-
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4 }}
-                  className="relative mx-auto w-full max-w-[320px] h-[240px] bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-lg overflow-hidden shadow-lg"
-                >
-                  {isLoadingModels ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="absolute inset-0 flex flex-col items-center justify-center"
-                    >
-                      <div className="relative">
-                        <div className="h-12 w-12 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="h-8 w-8 rounded-full bg-primary/20"></div>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-3">Cargando modelos de reconocimiento...</p>
-                    </motion.div>
-                  ) : cameraError ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-red-50 dark:bg-red-900/20"
-                    >
-                      <AlertCircle className="h-10 w-10 text-red-500 mb-2" />
-                      <p className="text-sm text-center text-gray-700 dark:text-gray-200">{cameraError}</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4 bg-white dark:bg-gray-800"
-                        onClick={() => {
-                          setCameraError(null)
-                          startCamera()
+                      <motion.span
+                        animate={{
+                          backgroundColor: isFaceDetected ? "rgb(34, 197, 94)" : "rgb(234, 179, 8)",
                         }}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" /> Reintentar
+                        transition={{ duration: 0.3 }}
+                        className={`text-xs font-medium px-2 py-1 rounded-full transition-all duration-300 text-white`}
+                      >
+                        {isFaceDetected ? "Rostro detectado ✓" : faceDetectionMessage}
+                      </motion.span>
                     </motion.div>
-                  ) : isFaceRegistered ? (
+                  </>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900"
+                  >
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                      className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 200 }}
+                      className="rounded-full bg-blue-100 dark:bg-blue-900/30 p-3 mb-3"
                     >
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                        className="rounded-full bg-green-100 dark:bg-green-900/50 p-3 mb-2"
-                      >
-                        <CheckCircle className="h-10 w-10 text-green-500" />
-                      </motion.div>
-                      <motion.p
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="text-sm font-medium text-green-700 dark:text-green-400"
-                      >
-                        ¡Rostro registrado con éxito!
-                      </motion.p>
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4 }}
-                        className="text-xs text-green-600 dark:text-green-500 mt-1"
-                      >
-                        Podrás usar tu rostro para iniciar sesión
-                      </motion.p>
+                      <Camera className="h-8 w-8 text-blue-500 dark:text-blue-400" />
                     </motion.div>
-                  ) : faceReadyForRegistration ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="absolute inset-0 flex flex-col items-center justify-center"
-                    >
-                      {capturedImageData ? (
-                        <img
-                          src={capturedImageData || "/placeholder.svg"}
-                          alt="Rostro capturado"
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="bg-gray-200 dark:bg-gray-700 w-full h-full"></div>
-                      )}
-
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center p-4"
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">Cámara desactivada</p>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button
+                        size="sm"
+                        onClick={startCamera}
+                        className="bg-gradient-to-r from-blue-500 to-primary hover:from-blue-600 hover:to-primary/90 text-white"
                       >
-                        <motion.div
-                          initial={{ scale: 0.9, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                          className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg max-w-[90%] text-center"
-                        >
-                          <ThumbsUp className="h-10 w-10 text-green-500 mx-auto mb-2" />
-                          <h3 className="text-sm font-medium mb-2">¡Rostro capturado correctamente!</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                            Presiona el botón para confirmar el registro biométrico
-                          </p>
-                          <div className="flex gap-2 justify-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={cancelFaceRegistration}
-                            >
-                              Volver a intentar
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={confirmFaceRegistration}
-                              className="bg-green-500 hover:bg-green-600"
-                            >
-                              Confirmar registro
-                            </Button>
-                          </div>
-                        </motion.div>
-                      </motion.div>
+                        <Camera className="h-4 w-4 mr-2" /> Activar cámara
+                      </Button>
                     </motion.div>
-                  ) : isCameraActive ? (
-                    <>
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        muted
-                        playsInline
-                        width={320}
-                        height={240}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <canvas ref={canvasRef} width={320} height={240} className="absolute inset-0 w-full h-full" />
+                  </motion.div>
+                )}
+              </motion.div>
 
-                      {/* Overlay con instrucciones */}
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="absolute top-2 left-0 right-0 flex justify-center"
-                      >
-                        <span className="text-xs font-medium px-3 py-1 rounded-full bg-black/50 text-white backdrop-blur-sm">
-                          {isFaceDetected ? "Mantén la posición" : "Centra tu rostro en el óvalo"}
-                        </span>
-                      </motion.div>
-
-                      {/* Indicador de progreso */}
-                      <AnimatePresence>
-                        {isFaceDetected && registrationProgress > 0 && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute bottom-8 left-4 right-4"
-                          >
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${registrationProgress}%` }}
-                                className="bg-gradient-to-r from-blue-500 to-primary h-2.5 rounded-full transition-all duration-300"
-                              />
-                            </div>
-                            <p className="text-xs text-center mt-1 font-medium text-white text-shadow">
-                              {registrationProgress < 100
-                                ? `Analizando: ${registrationProgress}%`
-                                : "Procesando..."}
-                            </p>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Indicador de estado */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
-                        className="absolute bottom-2 left-0 right-0 flex justify-center"
-                      >
-                        <motion.span
-                          animate={{
-                            backgroundColor: isFaceDetected ? "rgb(34, 197, 94)" : "rgb(234, 179, 8)",
-                          }}
-                          transition={{ duration: 0.3 }}
-                          className={`text-xs font-medium px-2 py-1 rounded-full transition-all duration-300 text-white`}
-                        >
-                          {isFaceDetected ? "Rostro detectado ✓" : faceDetectionMessage}
-                        </motion.span>
-                      </motion.div>
-                    </>
-                  ) : (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900"
-                    >
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200 }}
-                        className="rounded-full bg-blue-100 dark:bg-blue-900/30 p-3 mb-3"
-                      >
-                        <Camera className="h-8 w-8 text-blue-500 dark:text-blue-400" />
-                      </motion.div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">Cámara desactivada</p>
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Button
-                          size="sm"
-                          onClick={startCamera}
-                          className="bg-gradient-to-r from-blue-500 to-primary hover:from-blue-600 hover:to-primary/90 text-white"
-                        >
-                          <Camera className="h-4 w-4 mr-2" /> Activar cámara
-                        </Button>
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </motion.div>
-
-                {/* Información de depuración */}
-                <AnimatePresence>
-                  {debugInfo && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-md text-xs text-gray-600 dark:text-gray-400 overflow-auto max-h-20"
-                    >
-                      <p className="font-mono">{debugInfo}</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
+              {/* Información de depuración */}
+              {debugInfo && (
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="text-center mt-4"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-md text-xs text-gray-600 dark:text-gray-400 overflow-auto max-h-20"
                 >
-                  <p className="text-xs text-gray-500">
-                    {isFaceRegistered
-                      ? "Tu rostro ha sido registrado y se utilizará para verificar tu identidad al iniciar sesión."
-                      : faceReadyForRegistration
-                        ? "Revisa la imagen capturada y confirma el registro biométrico."
-                        : "Posiciona tu rostro frente a la cámara y mantente quieto para completar el registro biométrico."}
-                  </p>
+                  <p className="font-mono">{debugInfo}</p>
                 </motion.div>
-              </div>
+              )}
 
-              <div className="flex justify-between mt-6">
-                <Button variant="outline" onClick={() => setStep(2)}>
-                  Atrás
-                </Button>
-                <Button
-                  onClick={handleRegister}
-                  disabled={isLoading || (!isFaceRegistered && (isCameraActive || faceReadyForRegistration))}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Registrando...
-                    </>
-                  ) : isFaceRegistered ? (
-                    "Completar registro"
-                  ) : (
-                    "Registrar sin biometría"
-                  )}
-                </Button>
-              </div>
-            </>
-          )}
-        </motion.div>
-      </AnimatePresence>
-    );
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="text-center mt-4"
+              >
+                <p className="text-xs text-gray-500">
+                  {isFaceRegistered
+                    ? "Tu rostro ha sido registrado y se utilizará para verificar tu identidad al iniciar sesión."
+                    : faceReadyForRegistration
+                      ? "Revisa la imagen capturada y confirma el registro biométrico."
+                      : "Posiciona tu rostro frente a la cámara y mantente quieto para completar el registro biométrico."}
+                </p>
+              </motion.div>
+            </div>
+
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" onClick={() => setStep(2)}>
+                Atrás
+              </Button>
+              <Button
+                onClick={handleRegister}
+                disabled={isLoading || (!isFaceRegistered && (isCameraActive || faceReadyForRegistration))}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Registrando...
+                  </>
+                ) : isFaceRegistered ? (
+                  "Completar registro"
+                ) : (
+                  "Registrar sin biometría"
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+      </motion.div>
+    )
   }
 
   // Reemplazar el return principal con esta versión mejorada
@@ -1209,4 +1209,3 @@ export default function RegisterPage() {
     </div>
   )
 }
-

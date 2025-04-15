@@ -4,7 +4,7 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import type { FinanceState, FinanceContextType, Transaction, TransactionType, AccountType } from "@/types/finance"
 import { format, parseISO } from "date-fns"
-import * as storage from "@/lib/storage"
+import { toast } from "sonner"
 
 // Create context
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined)
@@ -22,38 +22,128 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Cargar datos al iniciar
   useEffect(() => {
-    // Cargar datos de ejemplo si no hay datos
-    storage.loadSampleData()
+    // Cargar transacciones de la API
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch("/api/transactions")
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(errorText || "Error al cargar las transacciones")
+        }
+        const data = await response.json()
+        setState(prev => ({
+          ...prev,
+          transactions: data
+        }))
+      } catch (error) {
+        console.error("Error loading transactions:", error)
+        toast.error("Error al cargar las transacciones")
+      }
+    }
 
-    // Cargar datos del almacenamiento
-    const data = storage.loadData()
-    setState(data)
+    fetchTransactions()
   }, [])
 
   // Add a new transaction
-  const addTransaction = (transaction: Omit<Transaction, "id">) => {
-    const newTransaction = storage.addTransaction(transaction)
-    setState(storage.loadData())
-    return newTransaction
+  const addTransaction = async (transaction: Omit<Transaction, "id" | "userId" | "createdAt" | "updatedAt" | "tags">) => {
+    try {
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(transaction),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al guardar la transacción")
+      }
+
+      const newTransaction = await response.json()
+      setState(prev => ({
+        ...prev,
+        transactions: [newTransaction, ...prev.transactions]
+      }))
+
+      return newTransaction
+    } catch (error) {
+      console.error("Error saving transaction:", error)
+      toast.error("Error al guardar la transacción")
+      throw error
+    }
   }
 
   // Edit an existing transaction
-  const editTransaction = (id: string, transaction: Omit<Transaction, "id">) => {
-    const result = storage.editTransaction(id, transaction)
-    setState(storage.loadData())
-    return result
+  const editTransaction = async (id: string, transaction: Omit<Transaction, "id" | "userId" | "createdAt" | "updatedAt" | "tags">) => {
+    try {
+      const response = await fetch(`/api/transactions/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(transaction),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al editar la transacción")
+      }
+
+      const updatedTransaction: Transaction = await response.json()
+      setState(prev => ({
+        ...prev,
+        transactions: prev.transactions.map(t => t.id === id ? updatedTransaction : t)
+      }))
+
+      return updatedTransaction
+    } catch (error) {
+      console.error("Error editing transaction:", error)
+      toast.error("Error al editar la transacción")
+      throw error
+    }
   }
 
   // Delete a transaction
-  const deleteTransaction = (id: string) => {
-    const result = storage.deleteTransaction(id)
-    setState(storage.loadData())
-    return result
+  const deleteTransaction = async (id: string) => {
+    try {
+      const response = await fetch(`/api/transactions/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al eliminar la transacción")
+      }
+
+      setState(prev => ({
+        ...prev,
+        transactions: prev.transactions.filter(t => t.id !== id)
+      }))
+
+      return true
+    } catch (error) {
+      console.error("Error deleting transaction:", error)
+      toast.error("Error al eliminar la transacción")
+      throw error
+    }
   }
 
   // Get a transaction by ID
-  const getTransactionById = (id: string) => {
-    return storage.getTransactionById(id)
+  const getTransactionById = async (id: string) => {
+    try {
+      const response = await fetch(`/api/transactions/${id}`)
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al cargar la transacción")
+      }
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error("Error loading transaction:", error)
+      toast.error("Error al cargar la transacción")
+      throw error
+    }
   }
 
   // Add a new account
@@ -76,12 +166,32 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error(`An account of type ${accountData.type} already exists`)
     }
 
-    // Simulate async operation
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    try {
+      const response = await fetch("/api/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(accountData),
+      })
 
-    const result = storage.addAccount(accountData)
-    setState(storage.loadData())
-    return result
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al guardar la cuenta")
+      }
+
+      const newAccount = await response.json()
+      setState(prev => ({
+        ...prev,
+        accounts: { ...prev.accounts, [newAccount.type]: newAccount }
+      }))
+
+      return newAccount
+    } catch (error) {
+      console.error("Error saving account:", error)
+      toast.error("Error al guardar la cuenta")
+      throw error
+    }
   }
 
   // Rename an account
@@ -90,27 +200,32 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error("Account name is required")
     }
 
-    // Simulate async operation
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    try {
+      const response = await fetch(`/api/accounts/${accountType}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: newName }),
+      })
 
-    const updatedAccounts = { ...state.accounts }
-    if (updatedAccounts[accountType]) {
-      updatedAccounts[accountType] = {
-        ...updatedAccounts[accountType],
-        name: newName,
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al renombrar la cuenta")
       }
 
-      const updatedState = {
-        ...state,
-        accounts: updatedAccounts,
-      }
+      const updatedAccount = await response.json()
+      setState(prev => ({
+        ...prev,
+        accounts: { ...prev.accounts, [updatedAccount.type]: updatedAccount }
+      }))
 
-      storage.saveData(updatedState)
-      setState(updatedState)
       return true
+    } catch (error) {
+      console.error("Error renaming account:", error)
+      toast.error("Error al renombrar la cuenta")
+      throw error
     }
-
-    throw new Error("Account not found")
   }
 
   // Transfer funds between accounts
@@ -135,48 +250,70 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error("Insufficient funds in source account")
     }
 
-    // Simulate async operation
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    try {
+      const response = await fetch("/api/transfers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fromAccount, toAccount, amount }),
+      })
 
-    // Create withdrawal transaction
-    const withdrawalTransaction: Omit<Transaction, "id"> = {
-      type: "expense",
-      amount,
-      description: `Transfer to ${state.accounts[toAccount].name}`,
-      category: "transfer",
-      date: new Date().toISOString(),
-      account: fromAccount,
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al transferir fondos")
+      }
+
+      const transferData = await response.json()
+      setState(prev => ({
+        ...prev,
+        transactions: [...prev.transactions, ...transferData.transactions],
+        accounts: { ...prev.accounts, [fromAccount]: transferData.fromAccount, [toAccount]: transferData.toAccount }
+      }))
+
+      return true
+    } catch (error) {
+      console.error("Error transferring funds:", error)
+      toast.error("Error al transferir fondos")
+      throw error
     }
-
-    // Create deposit transaction
-    const depositTransaction: Omit<Transaction, "id"> = {
-      type: "income",
-      amount,
-      description: `Transfer from ${state.accounts[fromAccount].name}`,
-      category: "transfer",
-      date: new Date().toISOString(),
-      account: toAccount,
-    }
-
-    // Add both transactions
-    storage.addTransaction(withdrawalTransaction)
-    storage.addTransaction(depositTransaction)
-
-    setState(storage.loadData())
-    return true
   }
 
   // Get filtered transactions by type and/or month
   const getFilteredTransactions = (type?: TransactionType, month?: string) => {
     return state.transactions.filter((transaction) => {
-      const transactionDate = parseISO(transaction.date)
-      const transactionMonth = format(transactionDate, "MMMM yyyy")
+      const transactionMonth = format(transaction.date, "MMMM yyyy")
 
       const typeMatch = type ? transaction.type === type : true
       const monthMatch = month ? transactionMonth === month : true
 
       return typeMatch && monthMatch
     })
+  }
+
+  // Get monthly data for charts
+  const getMonthlyData = () => {
+    const monthlyData: { [key: string]: { income: number; expenses: number } } = {}
+
+    state.transactions.forEach((transaction) => {
+      const month = format(transaction.date, "MMM yyyy")
+
+      if (!monthlyData[month]) {
+        monthlyData[month] = { income: 0, expenses: 0 }
+      }
+
+      if (transaction.type === "income") {
+        monthlyData[month].income += transaction.amount
+      } else {
+        monthlyData[month].expenses += transaction.amount
+      }
+    })
+
+    return Object.entries(monthlyData).map(([month, data]) => ({
+      month,
+      income: Number.parseFloat(data.income.toFixed(2)),
+      expenses: Number.parseFloat(data.expenses.toFixed(2)),
+    }))
   }
 
   // Calculate total balance across all accounts
@@ -214,32 +351,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return Number.parseFloat(rate.toFixed(1))
   }
 
-  // Get monthly data for charts
-  const getMonthlyData = () => {
-    const monthlyData: { [key: string]: { income: number; expenses: number } } = {}
-
-    state.transactions.forEach((transaction) => {
-      const date = parseISO(transaction.date)
-      const month = format(date, "MMM yyyy")
-
-      if (!monthlyData[month]) {
-        monthlyData[month] = { income: 0, expenses: 0 }
-      }
-
-      if (transaction.type === "income") {
-        monthlyData[month].income += transaction.amount
-      } else {
-        monthlyData[month].expenses += transaction.amount
-      }
-    })
-
-    return Object.entries(monthlyData).map(([month, data]) => ({
-      month,
-      income: Number.parseFloat(data.income.toFixed(2)),
-      expenses: Number.parseFloat(data.expenses.toFixed(2)),
-    }))
-  }
-
   const value = {
     state,
     addTransaction,
@@ -268,4 +379,3 @@ export const useFinance = () => {
   }
   return context
 }
-

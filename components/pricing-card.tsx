@@ -115,4 +115,3 @@ export function PricingCard({ id, name, price, period, features, featured, curre
     </>
   )
 }
-

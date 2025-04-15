@@ -537,4 +537,3 @@ export function DetailedAccountView({ accountType, onBack }: { accountType: Acco
     </div>
   )
 }
-

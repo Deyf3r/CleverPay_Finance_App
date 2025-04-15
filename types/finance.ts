@@ -1,3 +1,5 @@
+import type { Transaction as PrismaTransaction, Tag as PrismaTag } from "@prisma/client"
+
 // Tipos de transacciones
 export type TransactionType = "income" | "expense"
 
@@ -6,44 +8,62 @@ export type AccountType = "checking" | "savings" | "credit" | "cash"
 
 // Categorías de transacciones
 export type TransactionCategory =
-  | "food"
-  | "transportation"
-  | "housing"
-  | "utilities"
-  | "entertainment"
-  | "health"
-  | "education"
-  | "shopping"
-  | "travel"
-  | "salary"
-  | "investment"
-  | "other"
+  | "Salario"
+  | "Inversiones"
+  | "Regalos"
+  | "Bonos"
+  | "Freelance"
+  | "Alquileres"
+  | "Dividendos"
+  | "Reembolsos"
+  | "Ventas"
+  | "Alimentación"
+  | "Transporte"
+  | "Vivienda"
+  | "Entretenimiento"
+  | "Salud"
+  | "Educación"
+  | "Ropa"
+  | "Servicios"
+  | "Viajes"
+  | "Tecnología"
+  | "Mascotas"
+  | "Impuestos"
+  | "Seguros"
+  | "Otros"
 
 // Estructura de una transacción
-export interface Transaction {
-  id: string
-  type: TransactionType
-  amount: number
-  description: string
-  category: TransactionCategory
-  date: string
-  account: AccountType
+export interface Transaction extends PrismaTransaction {
+  tags: Tag[]
+}
+
+// Estructura de una etiqueta
+export interface Tag extends PrismaTag {}
+
+// Estructura de una cuenta
+export interface Account {
+  balance: number
+  name: string
 }
 
 // Estructura del estado de finanzas
 export interface FinanceState {
   transactions: Transaction[]
-  accounts: Record<AccountType, { balance: number; name: string }>
+  accounts: {
+    [key in AccountType]: Account
+  }
 }
 
 // Tipo para el contexto de finanzas
 export interface FinanceContextType {
   state: FinanceState
-  addTransaction: (transaction: Omit<Transaction, "id">) => Transaction
-  editTransaction: (id: string, transaction: Omit<Transaction, "id">) => Transaction | null
-  deleteTransaction: (id: string) => boolean
-  getTransactionById: (id: string) => Transaction | undefined
-  addAccount: (accountData: { type: AccountType; name: string; initialBalance: number }) => boolean
+  addTransaction: (transaction: Omit<Transaction, "id" | "userId" | "createdAt" | "updatedAt" | "tags">) => Promise<Transaction>
+  editTransaction: (id: string, transaction: Omit<Transaction, "id" | "userId" | "createdAt" | "updatedAt" | "tags">) => Promise<Transaction>
+  deleteTransaction: (id: string) => Promise<boolean>
+  getTransactionById: (id: string) => Promise<Transaction>
+  addAccount: (accountData: { type: AccountType; name: string; initialBalance: number }) => Promise<Account>
+  renameAccount: (accountType: AccountType, newName: string) => Promise<boolean>
+  transferFunds: (fromAccount: AccountType, toAccount: AccountType, amount: number) => Promise<boolean>
   getFilteredTransactions: (type?: TransactionType, month?: string) => Transaction[]
   getTotalBalance: () => number
   getTotalIncome: () => number
@@ -51,4 +71,3 @@ export interface FinanceContextType {
   getSavingsRate: () => number
   getMonthlyData: () => { month: string; income: number; expenses: number }[]
 }
-

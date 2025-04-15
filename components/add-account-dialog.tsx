@@ -263,4 +263,3 @@ export function AddAccountDialog({ onAccountAdded }: AddAccountDialogProps) {
     </Dialog>
   )
 }
-

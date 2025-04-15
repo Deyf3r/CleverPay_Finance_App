@@ -115,23 +115,48 @@ export function AdvancedPredictionDashboard() {
     return expensePredictions.map((expense, index) => {
       const income = incomePredictions[index] || { amount: 0, confidence: 0 }
 
-      // Calculate confidence intervals
-      const expenseConfidenceInterval = expense.amount * (1 - expense.confidence)
-      const incomeConfidenceInterval = income.amount * (1 - income.confidence)
+      // Calcular intervalos de confianza ajustados por el nivel de volatilidad
+      // Intervalos más amplios cuando la volatilidad es alta
+      const volatilityFactor = Math.max(expense.volatility, income.volatility)
+      const confidenceMultiplier = 1 + volatilityFactor * 0.5
+
+      const expenseConfidenceInterval = expense.amount * (1 - expense.confidence) * confidenceMultiplier
+      const incomeConfidenceInterval = income.amount * (1 - income.confidence) * confidenceMultiplier
+
+      // Asegurar que el intervalo inferior no sea negativo
+      const expensesLower = Math.max(0, expense.amount - expenseConfidenceInterval)
+      const incomeLower = Math.max(0, income.amount - incomeConfidenceInterval)
+
+      // Calcular ahorros y sus intervalos
+      const savings = Math.max(0, incomeLower - expense.amount)
+      const savingsLower = Math.max(0, incomeLower - expense.amount)
+      const savingsUpper = Math.max(0, income.amount - expensesLower)
+
+      // Detección de riesgo financiero
+      const financialRisk =
+        income.amount * 0.9 < expense.amount ? "high" : income.amount * 0.75 < expense.amount ? "medium" : "low"
+
+      // Calcular tasa de ahorro (porcentaje de ingresos)
+      const savingsRate = income.amount > 0 ? (savings / income.amount) * 100 : 0
 
       return {
         month: expense.month,
         expenses: expense.amount,
         income: income.amount,
-        savings: Math.max(0, income.amount - expense.amount),
-        expensesLower: Math.max(0, expense.amount - expenseConfidenceInterval),
+        savings,
+        savingsRate,
+        expensesLower,
         expensesUpper: expense.amount + expenseConfidenceInterval,
-        incomeLower: Math.max(0, income.amount - incomeConfidenceInterval),
+        incomeLower,
         incomeUpper: income.amount + incomeConfidenceInterval,
+        savingsLower,
+        savingsUpper,
         expenseConfidence: expense.confidence,
         incomeConfidence: income.confidence,
         expenseTrend: expense.trend,
         incomeTrend: income.trend,
+        financialRisk,
+        volatility: volatilityFactor,
       }
     })
   }
@@ -1266,7 +1291,23 @@ export function AdvancedPredictionDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+      {chartData.map(
+        (data, index) =>
+          data.financialRisk === "high" && (
+            <div
+              key={`risk-${index}`}
+              className="absolute"
+              style={{
+                left: `${(index / (chartData.length - 1)) * 100}%`,
+                bottom: 0,
+                height: "100%",
+                width: "4px",
+              }}
+            >
+              <div className="h-full w-1 bg-red-500/20" title={`Alto riesgo financiero en ${data.month}`} />
+            </div>
+          ),
+      )}
     </TooltipProvider>
   )
 }
-

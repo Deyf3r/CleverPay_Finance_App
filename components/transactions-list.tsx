@@ -187,4 +187,3 @@ export function TransactionsList({ transactions, onEdit, onDelete }: Transaction
     </div>
   )
 }
-

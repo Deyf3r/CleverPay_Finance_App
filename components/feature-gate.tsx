@@ -36,4 +36,3 @@ export function FeatureGate({ feature, children, fallback, currentCount, compact
   // De lo contrario, mostrar el mensaje de actualización
   return <UpgradePlanMessage featureKey={feature} compact={compact} />
 }
-

@@ -129,22 +129,46 @@ export function predictExpenses(transactions: Transaction[], months = 3): Expens
   let confidenceBase = 0.7 // Confianza base
 
   if (expenseValues.length >= 6) {
-    // Calcular tendencia (pendiente)
+    // Algoritmo de regresión lineal ponderada para darle más importancia a datos recientes
     let sumX = 0,
       sumY = 0,
       sumXY = 0,
-      sumX2 = 0
+      sumX2 = 0,
+      sumWeights = 0
     const n = expenseValues.length
 
     for (let i = 0; i < n; i++) {
-      sumX += i
-      sumY += expenseValues[i]
-      sumXY += i * expenseValues[i]
-      sumX2 += i * i
+      // Ponderación exponencial: datos más recientes tienen mayor peso
+      const weight = Math.exp(0.3 * (i / (n - 1)))
+
+      sumX += i * weight
+      sumY += expenseValues[i] * weight
+      sumXY += i * expenseValues[i] * weight
+      sumX2 += i * i * weight
+      sumWeights += weight
     }
 
-    slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
-    intercept = (sumY - slope * sumX) / n
+    slope = (sumWeights * sumXY - sumX * sumY) / (sumWeights * sumX2 - sumX * sumX)
+    intercept = (sumY - slope * sumX) / sumWeights
+
+    // Verificar si la tendencia es estadísticamente significativa
+    // Si R² es muy bajo, preferimos considerar la tendencia como menos significativa
+    const meanY = sumY / sumWeights
+    let totalSumSquares = 0
+    let residualSumSquares = 0
+
+    for (let i = 0; i < n; i++) {
+      const weight = Math.exp(0.3 * (i / (n - 1)))
+      totalSumSquares += weight * Math.pow(expenseValues[i] - meanY, 2)
+      residualSumSquares += weight * Math.pow(expenseValues[i] - (intercept + slope * i), 2)
+    }
+
+    const rSquared = 1 - residualSumSquares / totalSumSquares
+
+    // Si R² es bajo, reducir el efecto de la tendencia
+    if (rSquared < 0.2) {
+      slope *= rSquared * 2 // Reducir la pendiente proporcionalmente
+    }
 
     // Calcular factores estacionales (por mes del año)
     const monthFactors: Record<number, { sum: number; count: number }> = {}
@@ -308,17 +332,34 @@ export function predictExpenses(transactions: Transaction[], months = 3): Expens
     const year = getYear(futureMonth)
     const monthName = format(futureMonth, "MMMM")
 
-    // Base de predicción: promedio reciente + tendencia
-    let predictedAmount = avgRecentMonthlyExpense + slope * (expenseValues.length + i - 1)
+    // Combinar diferentes modelos de predicción con ensamblado
+    const trendModelPrediction = intercept + slope * (expenseValues.length + i - 1)
 
-    // Si tenemos suficientes datos, usar el modelo completo
-    if (expenseValues.length >= 6) {
-      predictedAmount = intercept + slope * (expenseValues.length + i - 1)
+    // Modelo de promedio reciente
+    const recentAvgModelPrediction = avgRecentMonthlyExpense
+
+    // Modelo estacional (si hay suficientes datos históricos)
+    let seasonalModelPrediction = avgRecentMonthlyExpense
+    if (monthNumber in seasonalFactors) {
+      seasonalModelPrediction = avgRecentMonthlyExpense * seasonalFactors[monthNumber]
     }
 
-    // Aplicar factor estacional si está disponible
-    const seasonalFactor = seasonalFactors[monthNumber] || 1
-    predictedAmount *= seasonalFactor
+    // Modelo híbrido basado en la calidad de los datos
+    let trendConfidence = expenseValues.length >= 12 ? 0.6 : 0.4 * (expenseValues.length / 12)
+    let seasonalConfidence = Object.keys(seasonalFactors).length >= 6 ? 0.5 : 0.3
+    let recentAvgConfidence = 0.7 - 0.3 * volatilityFactor // Menos confianza en promedio reciente si hay alta volatilidad
+
+    // Normalizar confianzas para que sumen 1
+    const sumConfidences = trendConfidence + seasonalConfidence + recentAvgConfidence
+    trendConfidence /= sumConfidences
+    seasonalConfidence /= sumConfidences
+    recentAvgConfidence /= sumConfidences
+
+    // Predicción final como promedio ponderado de modelos
+    let predictedAmount =
+      trendModelPrediction * trendConfidence +
+      seasonalModelPrediction * seasonalConfidence +
+      recentAvgModelPrediction * recentAvgConfidence
 
     // Ajustes estacionales adicionales basados en patrones comunes
     const month = monthNumber + 1 // 1-12 para legibilidad
@@ -1870,4 +1911,3 @@ export function generateFinancialInsights(transactions: Transaction[]): {
     anomalies,
   }
 }
-

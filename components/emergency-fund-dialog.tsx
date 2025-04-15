@@ -196,4 +196,3 @@ export default function EmergencyFundDialog({ open, onOpenChange }: EmergencyFun
     </Dialog>
   )
 }
-

@@ -124,4 +124,3 @@ export default function PredictionChart({ incomeData, expenseData, title }: Pred
     </div>
   )
 }
-

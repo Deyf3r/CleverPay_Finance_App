@@ -2,7 +2,7 @@
 
 import { useFinance } from "@/context/finance-context"
 import { useSettings } from "@/context/settings-context"
-import { format, parseISO, subMonths } from "date-fns"
+import { format, parseISO, subMonths, startOfMonth, endOfMonth } from "date-fns"
 import { BarChart3Icon } from "lucide-react"
 import { useTheme } from "next-themes"
 import {
@@ -34,76 +34,96 @@ export function AccountChart({ accountType }: AccountChartProps) {
 
   // Preparar datos para el gráfico
   const currentDate = new Date()
-  const sixMonthsAgo = subMonths(currentDate, 6)
+  const sixMonthsAgo = startOfMonth(subMonths(currentDate, 5))
 
   // Crear un array de los últimos 6 meses
-  const months: string[] = []
+  const monthsData: { date: Date; key: string }[] = []
   for (let i = 5; i >= 0; i--) {
     const monthDate = subMonths(currentDate, i)
-    months.push(format(monthDate, "MMM yyyy"))
+    monthsData.push({
+      date: startOfMonth(monthDate),
+      key: format(monthDate, "MMM yyyy"),
+    })
   }
 
-  // Inicializar datos mensuales
-  const monthlyData: Record<string, { income: number; expenses: number; balance: number }> = {}
+  // Obtener el saldo actual de la cuenta
+  const currentBalance = state.accounts[accountType as keyof typeof state.accounts]?.balance || 0
 
-  months.forEach((month) => {
-    monthlyData[month] = { income: 0, expenses: 0, balance: 0 }
-  })
+  // Calcular el saldo inicial (antes del período de 6 meses)
+  let initialBalance = currentBalance
 
-  // Calcular saldo inicial (saldo actual menos todas las transacciones en los últimos 6 meses)
-  let initialBalance = state.accounts[accountType as keyof typeof state.accounts]?.balance || 0
-
+  // Restar el efecto de todas las transacciones en los últimos 6 meses
   accountTransactions.forEach((transaction) => {
-    const date = parseISO(transaction.date)
-    if (date >= sixMonthsAgo) {
-      initialBalance -= transaction.type === "income" ? transaction.amount : -transaction.amount
+    const transactionDate = parseISO(transaction.date)
+    if (transactionDate >= sixMonthsAgo) {
+      if (transaction.type === "income") {
+        initialBalance -= transaction.amount
+      } else {
+        initialBalance += transaction.amount
+      }
     }
   })
 
-  // Calcular datos mensuales
+  // Inicializar datos mensuales con el saldo inicial
+  const monthlyData = monthsData.reduce<
+    Record<
+      string,
+      {
+        income: number
+        expenses: number
+        balance: number
+        transactions: number
+      }
+    >
+  >((acc, { key }) => {
+    acc[key] = { income: 0, expenses: 0, balance: 0, transactions: 0 }
+    return acc
+  }, {})
+
+  // Procesar transacciones mes a mes
   let runningBalance = initialBalance
 
-  // Sort transactions by date
-  const sortedTransactions = [...accountTransactions]
-    .filter((t) => parseISO(t.date) >= sixMonthsAgo)
-    .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+  // Procesar cada mes secuencialmente
+  monthsData.forEach((month, index) => {
+    const monthKey = month.key
+    const monthStart = month.date
+    const monthEnd = index < monthsData.length - 1 ? monthsData[index + 1].date : endOfMonth(currentDate)
 
-  // Process transactions month by month
-  months.forEach((monthKey, index) => {
-    // If this is not the first month, carry over the previous month's balance
-    if (index > 0) {
-      const prevMonth = months[index - 1]
-      runningBalance = monthlyData[prevMonth].balance
+    // Filtrar transacciones para este mes
+    const monthTransactions = accountTransactions.filter((t) => {
+      const date = parseISO(t.date)
+      return date >= monthStart && date < monthEnd
+    })
+
+    // Calcular ingresos y gastos del mes
+    let monthIncome = 0
+    let monthExpenses = 0
+
+    monthTransactions.forEach((transaction) => {
+      if (transaction.type === "income") {
+        monthIncome += transaction.amount
+        runningBalance += transaction.amount
+      } else {
+        monthExpenses += transaction.amount
+        runningBalance -= transaction.amount
+      }
+    })
+
+    // Guardar datos del mes
+    monthlyData[monthKey] = {
+      income: monthIncome,
+      expenses: monthExpenses,
+      balance: runningBalance,
+      transactions: monthTransactions.length,
     }
-
-    // Process all transactions for this month
-    const monthStart = parseISO(monthKey)
-    const monthEnd = index < months.length - 1 ? parseISO(months[index + 1]) : new Date() // Use current date for the last month
-
-    sortedTransactions
-      .filter((t) => {
-        const date = parseISO(t.date)
-        return date >= monthStart && date < monthEnd
-      })
-      .forEach((transaction) => {
-        if (transaction.type === "income") {
-          monthlyData[monthKey].income += transaction.amount
-          runningBalance += transaction.amount
-        } else {
-          monthlyData[monthKey].expenses += transaction.amount
-          runningBalance -= transaction.amount
-        }
-      })
-
-    monthlyData[monthKey].balance = runningBalance
   })
 
   // Preparar datos para el gráfico
-  const chartData = months.map((month) => ({
-    month,
-    income: monthlyData[month].income,
-    expenses: monthlyData[month].expenses,
-    balance: monthlyData[month].balance,
+  const chartData = monthsData.map(({ key }) => ({
+    month: key,
+    income: monthlyData[key].income,
+    expenses: monthlyData[key].expenses,
+    balance: monthlyData[key].balance,
   }))
 
   // Colores basados en el tema
@@ -158,15 +178,17 @@ export function AccountChart({ accountType }: AccountChartProps) {
             tick={{ fill: textColor }}
             axisLine={{ stroke: gridColor }}
             tickLine={{ stroke: gridColor }}
-            tickFormatter={(value) => `$${value}`}
+            tickFormatter={(value) => formatCurrency(value)}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend
             wrapperStyle={{ paddingTop: 10 }}
-            formatter={(value) => <span className="text-sm font-medium">{value}</span>}
+            formatter={(value) => (
+              <span className="text-sm font-medium">{translate(`accounts.${value.toLowerCase()}`)}</span>
+            )}
           />
           <Bar
-            name={translate("accounts.income")}
+            name="Income"
             dataKey="income"
             fill={incomeColor}
             radius={[4, 4, 0, 0]}
@@ -175,7 +197,7 @@ export function AccountChart({ accountType }: AccountChartProps) {
             animationEasing="ease-in-out"
           />
           <Bar
-            name={translate("accounts.expenses")}
+            name="Expenses"
             dataKey="expenses"
             fill={expenseColor}
             radius={[4, 4, 0, 0]}
@@ -184,7 +206,7 @@ export function AccountChart({ accountType }: AccountChartProps) {
             animationEasing="ease-in-out"
           />
           <Line
-            name={translate("accounts.balance")}
+            name="Balance"
             type="monotone"
             dataKey="balance"
             stroke={balanceColor}
@@ -199,4 +221,3 @@ export function AccountChart({ accountType }: AccountChartProps) {
     </div>
   )
 }
-

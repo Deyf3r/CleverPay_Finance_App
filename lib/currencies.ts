@@ -7,4 +7,3 @@ export const currencies = {
   CAD: { code: "CAD", symbol: "C$", name: "Canadian Dollar", rate: 1.36, decimals: 2 },
   DOP: { code: "DOP", symbol: "RD$", name: "Dominican Peso", rate: 58.75, decimals: 2 },
 }
-

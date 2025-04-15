@@ -95,4 +95,3 @@ export default function SavingsGoal({ goal, currentSavings = 0 }: SavingsGoalPro
     </Card>
   )
 }
-

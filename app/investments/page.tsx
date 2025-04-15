@@ -2,448 +2,460 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, TrendingUp, PieChart, DollarSign, BarChart4, Clock, Info, ChevronRight, Plus } from "lucide-react"
-import { useFinance } from "@/context/finance-context"
+import {
+  ArrowLeft,
+  Wallet,
+  LineChart,
+  TrendingUp,
+  BarChart4,
+  ArrowRight,
+  LayoutDashboard,
+  PieChart,
+} from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useSettings } from "@/context/settings-context"
-import NavBar from "@/components/nav-bar"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from "@/components/ui/use-toast"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { motion } from "framer-motion"
 
 export default function InvestmentsPage() {
-  const { state } = useFinance()
+  const router = useRouter()
   const { formatCurrency, translate } = useSettings()
-  const [showAddInvestmentDialog, setShowAddInvestmentDialog] = useState(false)
-  const [newInvestmentName, setNewInvestmentName] = useState("")
-  const [newInvestmentAmount, setNewInvestmentAmount] = useState("")
-  const [newInvestmentType, setNewInvestmentType] = useState("stock")
-
-  // Calcular ahorros actuales del mes
-  const currentDate = new Date()
-  const currentMonth = currentDate.getMonth()
-  const currentYear = currentDate.getFullYear()
-
-  const currentMonthIncome = state.transactions
-    .filter((t) => {
-      const date = new Date(t.date)
-      return t.type === "income" && date.getMonth() === currentMonth && date.getFullYear() === currentYear
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const currentMonthExpenses = state.transactions
-    .filter((t) => {
-      const date = new Date(t.date)
-      return t.type === "expense" && date.getMonth() === currentMonth && date.getFullYear() === currentYear
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const currentSavings = Math.max(0, currentMonthIncome - currentMonthExpenses)
-  const savingsRate = currentMonthIncome > 0 ? (currentSavings / currentMonthIncome) * 100 : 0
+  const [activeTab, setActiveTab] = useState("overview")
 
   // Datos de ejemplo para inversiones
-  const [investments, setInvestments] = useState([
+  const investments = [
     {
-      id: "1",
-      name: "S&P 500 ETF",
-      type: "etf",
-      amount: 5000,
-      performance: 8.5,
-      lastUpdate: "2023-10-15",
+      name: translate("investments.stock_fund"),
+      value: 3500,
+      allocation: 40,
+      return: 12.5,
+      risk: "medium",
     },
     {
-      id: "2",
-      name: "Tech Growth Fund",
-      type: "fund",
-      amount: 3000,
-      performance: 12.3,
-      lastUpdate: "2023-10-15",
+      name: translate("investments.bond_fund"),
+      value: 2500,
+      allocation: 30,
+      return: 4.2,
+      risk: "low",
     },
     {
-      id: "3",
-      name: "Dividend Portfolio",
-      type: "stock",
-      amount: 4500,
-      performance: 5.7,
-      lastUpdate: "2023-10-15",
+      name: translate("investments.real_estate"),
+      value: 1500,
+      allocation: 20,
+      return: 8.7,
+      risk: "medium",
     },
-  ])
+    {
+      name: translate("investments.cash"),
+      value: 750,
+      allocation: 10,
+      return: 1.5,
+      risk: "very_low",
+    },
+  ]
 
-  // Calcular totales
-  const totalInvested = investments.reduce((sum, inv) => sum + inv.amount, 0)
-  const weightedPerformance = investments.reduce((sum, inv) => sum + inv.amount * inv.performance, 0) / totalInvested
+  const totalInvestment = investments.reduce((sum, inv) => sum + inv.value, 0)
 
-  // Añadir nueva inversión
-  const addInvestment = () => {
-    if (!newInvestmentName.trim()) {
-      toast({
-        title: "Nombre inválido",
-        description: "Por favor ingresa un nombre válido para la inversión",
-        variant: "destructive",
-      })
-      return
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+      },
+    },
+  }
+
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case "very_low":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800/30"
+      case "low":
+        return "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800/30"
+      case "medium":
+        return "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800/30"
+      case "high":
+        return "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 border-orange-200 dark:border-orange-800/30"
+      case "very_high":
+        return "bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 border-rose-200 dark:border-rose-800/30"
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-400 border-gray-200 dark:border-gray-800/30"
     }
+  }
 
-    if (!newInvestmentAmount || isNaN(Number(newInvestmentAmount)) || Number(newInvestmentAmount) <= 0) {
-      toast({
-        title: "Monto inválido",
-        description: "Por favor ingresa un monto válido para la inversión",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const newInvestment = {
-      id: Date.now().toString(),
-      name: newInvestmentName,
-      type: newInvestmentType,
-      amount: Number(newInvestmentAmount),
-      performance: Math.random() * 10 + 2, // Rendimiento aleatorio entre 2% y 12%
-      lastUpdate: new Date().toISOString().split("T")[0],
-    }
-
-    setInvestments([...investments, newInvestment])
-    setNewInvestmentName("")
-    setNewInvestmentAmount("")
-    setShowAddInvestmentDialog(false)
-
-    toast({
-      title: "Inversión añadida",
-      description: "La inversión ha sido añadida exitosamente",
-    })
+  const getAllocationColor = (index: number) => {
+    const colors = [
+      "bg-purple-500 dark:bg-purple-600",
+      "bg-blue-500 dark:bg-blue-600",
+      "bg-emerald-500 dark:bg-emerald-600",
+      "bg-amber-500 dark:bg-amber-600",
+      "bg-rose-500 dark:bg-rose-600",
+    ]
+    return colors[index % colors.length]
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <NavBar />
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 animate-fadeIn">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" asChild className="mr-2">
-              <Link href="/dashboard">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-emerald-600 to-green-600 dark:from-emerald-400 dark:to-green-400 text-transparent bg-clip-text">
-              Inversiones
-            </h2>
+    <div className="container mx-auto py-8 px-4 max-w-5xl">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" onClick={() => router.push("/ai-insights")} className="h-10 w-10">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+              {translate("investments.title")}
+            </h1>
+            <p className="text-muted-foreground">{translate("investments.subtitle")}</p>
           </div>
-          <Button onClick={() => setShowAddInvestmentDialog(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Añadir Inversión
+        </div>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/dashboard">
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Dashboard
+            </Link>
           </Button>
         </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Invertido</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalInvested)}</div>
-              <p className="text-xs text-muted-foreground">{investments.length} activos</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rendimiento Promedio</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {weightedPerformance.toFixed(2)}%
-              </div>
-              <p className="text-xs text-muted-foreground">Rendimiento anual</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ahorros Mensuales</CardTitle>
-              <BarChart4 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(currentSavings)}</div>
-              <p className="text-xs text-muted-foreground">{savingsRate.toFixed(1)}% de tus ingresos</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Crecimiento Proyectado</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalInvested * 1.5)}</div>
-              <p className="text-xs text-muted-foreground">En 5 años</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="portfolio" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="portfolio">Portafolio</TabsTrigger>
-            <TabsTrigger value="performance">Rendimiento</TabsTrigger>
-            <TabsTrigger value="recommendations">Recomendaciones</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="portfolio" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tus Inversiones</CardTitle>
-                <CardDescription>Gestiona tu portafolio de inversiones actual</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {investments.map((investment) => (
-                    <div key={investment.id} className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className={
-                              investment.type === "etf"
-                                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800/30"
-                                : investment.type === "fund"
-                                  ? "bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400 border-purple-200 dark:border-purple-800/30"
-                                  : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
-                            }
-                          >
-                            {investment.type.toUpperCase()}
-                          </Badge>
-                          <h3 className="text-sm font-medium">{investment.name}</h3>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Última actualización: {investment.lastUpdate}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium">{formatCurrency(investment.amount)}</div>
-                        <div className="text-xs text-emerald-600 dark:text-emerald-400">
-                          +{investment.performance.toFixed(2)}%
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="border-t px-6 py-3">
-                <Button variant="outline" className="w-full gap-2" onClick={() => setShowAddInvestmentDialog(true)}>
-                  <Plus className="h-4 w-4" />
-                  Añadir Inversión
-                </Button>
-              </CardFooter>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribución de Activos</CardTitle>
-                <CardDescription>Cómo están distribuidas tus inversiones por tipo de activo</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { type: "etf", label: "ETFs" },
-                    { type: "fund", label: "Fondos" },
-                    { type: "stock", label: "Acciones" },
-                  ].map((assetType) => {
-                    const assetTotal = investments
-                      .filter((inv) => inv.type === assetType.type)
-                      .reduce((sum, inv) => sum + inv.amount, 0)
-                    const percentage = (assetTotal / totalInvested) * 100
-
-                    return (
-                      <div key={assetType.type} className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm">{assetType.label}</span>
-                          <span className="text-sm font-medium">
-                            {formatCurrency(assetTotal)} ({percentage.toFixed(1)}%)
-                          </span>
-                        </div>
-                        <Progress
-                          value={percentage}
-                          className="h-2"
-                          indicatorClassName={
-                            assetType.type === "etf"
-                              ? "bg-blue-500"
-                              : assetType.type === "fund"
-                                ? "bg-purple-500"
-                                : "bg-emerald-500"
-                          }
-                        />
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="performance" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Rendimiento a lo Largo del Tiempo</CardTitle>
-                <CardDescription>Seguimiento del rendimiento de tus inversiones</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <PieChart className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                  <p>Gráficos próximamente</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="recommendations" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recomendaciones de Inversión</CardTitle>
-                <CardDescription>Basadas en tu perfil financiero y objetivos</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {[
-                    {
-                      name: "ETF de Índice Global",
-                      type: "etf",
-                      description: "Diversificación global con exposición a mercados desarrollados y emergentes",
-                      risk: "low",
-                      expectedReturn: "7-9%",
-                    },
-                    {
-                      name: "Aristocratas del Dividendo",
-                      type: "stock",
-                      description: "Empresas con historial de aumento de dividendos por más de 25 años consecutivos",
-                      risk: "medium",
-                      expectedReturn: "5-7%",
-                    },
-                    {
-                      name: "Fondo de Energía Verde",
-                      type: "fund",
-                      description: "Inversión en empresas líderes en energías renovables y tecnologías limpias",
-                      risk: "high",
-                      expectedReturn: "10-15%",
-                    },
-                  ].map((recommendation, index) => (
-                    <div key={index} className="p-4 border rounded-lg">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className={
-                                recommendation.type === "etf"
-                                  ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800/30"
-                                  : recommendation.type === "fund"
-                                    ? "bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400 border-purple-200 dark:border-purple-800/30"
-                                    : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
-                              }
-                            >
-                              {recommendation.type.toUpperCase()}
-                            </Badge>
-                            <Badge
-                              variant="outline"
-                              className={
-                                recommendation.risk === "low"
-                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
-                                  : recommendation.risk === "medium"
-                                    ? "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800/30"
-                                    : "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 border-rose-200 dark:border-rose-800/30"
-                              }
-                            >
-                              {recommendation.risk === "low"
-                                ? "Riesgo Bajo"
-                                : recommendation.risk === "medium"
-                                  ? "Riesgo Medio"
-                                  : "Riesgo Alto"}
-                            </Badge>
-                          </div>
-                          <h3 className="text-sm font-medium">{recommendation.name}</h3>
-                          <p className="text-xs text-muted-foreground">{recommendation.description}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs text-muted-foreground">Rendimiento Esperado</div>
-                          <div className="font-medium text-emerald-600 dark:text-emerald-400">
-                            {recommendation.expectedReturn}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-4 flex justify-end">
-                        <Button variant="link" size="sm" className="h-auto p-0 text-primary">
-                          Saber más
-                          <ChevronRight className="h-3 w-3 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="bg-muted/50 flex justify-between">
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Info className="h-3 w-3 mr-1" />
-                  Las inversiones conllevan riesgos. El rendimiento pasado no garantiza resultados futuros.
-                </div>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-        </Tabs>
       </div>
 
-      {/* Diálogo para añadir inversión */}
-      <Dialog open={showAddInvestmentDialog} onOpenChange={setShowAddInvestmentDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Añadir Inversión</DialogTitle>
-            <DialogDescription>Ingresa los detalles de tu nueva inversión</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nombre de la Inversión</Label>
-              <Input
-                id="name"
-                value={newInvestmentName}
-                onChange={(e) => setNewInvestmentName(e.target.value)}
-                placeholder="S&P 500 ETF"
-              />
+      <motion.div className="grid gap-6 mb-8" variants={containerVariants} initial="hidden" animate="visible">
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-900/5 dark:to-teal-900/5">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20">
+                  <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <CardTitle>{translate("investments.portfolio_summary")}</CardTitle>
+                  <CardDescription>{translate("investments.current_investments")}</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{translate("investments.total_value")}</p>
+                  <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(totalInvestment)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-emerald-600 dark:text-emerald-400">+{formatCurrency(350)}</span> (
+                    {translate("investments.this_month")})
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{translate("investments.average_return")}</p>
+                  <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">8.2%</p>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-emerald-600 dark:text-emerald-400">+1.2%</span> (
+                    {translate("investments.last_year")})
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{translate("investments.projected_value")}</p>
+                  <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(12500)}</p>
+                  <p className="text-sm text-muted-foreground">{translate("investments.in_years", { years: 5 })}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart4 className="h-4 w-4" />
+              {translate("investments.overview")}
+            </TabsTrigger>
+            <TabsTrigger value="allocation" className="flex items-center gap-2">
+              <PieChart className="h-4 w-4" />
+              {translate("dashboard.allocation")}
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="flex items-center gap-2">
+              <LineChart className="h-4 w-4" />
+              {translate("dashboard.performance")}
+            </TabsTrigger>
+          </TabsList>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate={activeTab === "overview" ? "visible" : "hidden"}
+          >
+            <TabsContent value="overview" className="space-y-6">
+              <motion.div variants={itemVariants}>
+                <Card className="border-0 shadow-md">
+                  <CardHeader>
+                    <CardTitle>{translate("investments.your_investments")}</CardTitle>
+                    <CardDescription>{translate("investments.current_holdings")}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {investments.map((investment, index) => (
+                        <div key={index} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={getRiskColor(investment.risk)}>
+                                {translate(`investments.risk.${investment.risk}`)}
+                              </Badge>
+                              <span className="font-medium">{investment.name}</span>
+                            </div>
+                            <span className="font-medium">{formatCurrency(investment.value)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">{investment.allocation}%</span>
+                            <span className="text-emerald-600 dark:text-emerald-400">+{investment.return}%</span>
+                          </div>
+                          <Progress
+                            value={investment.allocation}
+                            max={100}
+                            className="h-2"
+                            indicatorClassName={getAllocationColor(index)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button
+                      className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                      onClick={() => setActiveTab("allocation")}
+                    >
+                      {translate("investments.view_allocation")}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          </motion.div>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate={activeTab === "allocation" ? "visible" : "hidden"}
+          >
+            <TabsContent value="allocation" className="space-y-6">
+              <motion.div variants={itemVariants}>
+                <Card className="border-0 shadow-md">
+                  <CardHeader>
+                    <CardTitle>{translate("dashboard.allocation")}</CardTitle>
+                    <CardDescription>{translate("investments.portfolio_distribution")}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-center py-6">
+                      <div className="w-64 h-64 rounded-full border-8 border-background relative flex items-center justify-center overflow-hidden">
+                        {investments.map((investment, index) => {
+                          const previousSum = investments.slice(0, index).reduce((sum, inv) => sum + inv.allocation, 0)
+
+                          return (
+                            <div
+                              key={index}
+                              className={`absolute top-0 left-0 w-full h-full ${getAllocationColor(index)}`}
+                              style={{
+                                clipPath: `conic-gradient(from 0deg, transparent ${previousSum}%, transparent ${previousSum}%, currentColor ${previousSum + investment.allocation}%, transparent ${previousSum + investment.allocation}%)`,
+                              }}
+                            />
+                          )
+                        })}
+                        <div className="w-3/5 h-3/5 rounded-full bg-background z-10 flex items-center justify-center flex-col">
+                          <span className="text-xs text-muted-foreground">{translate("investments.total")}</span>
+                          <span className="text-xl font-bold">{formatCurrency(totalInvestment)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-6">
+                      {investments.map((investment, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${getAllocationColor(index)}`} />
+                          <span className="text-sm">{investment.name}</span>
+                          <span className="text-sm ml-auto">{investment.allocation}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button
+                      className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                      onClick={() => setActiveTab("performance")}
+                    >
+                      {translate("investments.view_performance")}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          </motion.div>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate={activeTab === "performance" ? "visible" : "hidden"}
+          >
+            <TabsContent value="performance" className="space-y-6">
+              <motion.div variants={itemVariants}>
+                <Card className="border-0 shadow-md">
+                  <CardHeader>
+                    <CardTitle>{translate("dashboard.performance")}</CardTitle>
+                    <CardDescription>{translate("investments.historical_returns")}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 flex items-end justify-between gap-2 mt-6 mb-1 px-2">
+                      {[5, 8, 3, 12, 7, 9, 15, 6, 11, 14, 10, 12].map((value, index) => (
+                        <div key={index} className="h-full flex-1 flex flex-col justify-end items-center gap-1">
+                          <div
+                            className="w-full bg-gradient-to-t from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600 rounded-t-sm"
+                            style={{ height: `${value * 5}%` }}
+                          ></div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                      {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(
+                        (month, idx) => (
+                          <div key={idx} className="flex-1 text-center">
+                            {month}
+                          </div>
+                        ),
+                      )}
+                    </div>
+
+                    <div className="mt-8 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">{translate("investments.ytd_return")}</span>
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
+                        >
+                          +8.2%
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">{translate("investments.one_year_return")}</span>
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
+                        >
+                          +12.5%
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">{translate("investments.three_year_return")}</span>
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
+                        >
+                          +28.7%
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">{translate("investments.five_year_return")}</span>
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
+                        >
+                          +42.3%
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button
+                      className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                      onClick={() => setActiveTab("overview")}
+                    >
+                      {translate("investments.back_to_overview")}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          </motion.div>
+        </Tabs>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <Card className="border-0 shadow-md mb-6 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-900/5 dark:to-orange-900/5">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20">
+                <TrendingUp className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <CardTitle>{translate("investments.opportunities")}</CardTitle>
+                <CardDescription>{translate("investments.personalized_recommendations")}</CardDescription>
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="type">Tipo de Inversión</Label>
-              <select
-                id="type"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={newInvestmentType}
-                onChange={(e) => setNewInvestmentType(e.target.value)}
-              >
-                <option value="etf">ETF</option>
-                <option value="fund">Fondo</option>
-                <option value="stock">Acción</option>
-              </select>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-4 border border-amber-200 dark:border-amber-800/30 rounded-lg bg-white dark:bg-black/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-amber-800 dark:text-amber-400">
+                    {translate("investments.index_fund_recommendation")}
+                  </span>
+                  <Badge variant="outline" className={getRiskColor("low")}>
+                    {translate("investments.risk.low")}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  {translate("investments.index_fund_description")}
+                </p>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{translate("investments.expected_return")}: 7-9%</span>
+                  <span className="text-amber-600 dark:text-amber-400">
+                    {translate("investments.recommended_allocation")}: 40%
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 border border-amber-200 dark:border-amber-800/30 rounded-lg bg-white dark:bg-black/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-amber-800 dark:text-amber-400">
+                    {translate("investments.dividend_stocks")}
+                  </span>
+                  <Badge variant="outline" className={getRiskColor("medium")}>
+                    {translate("investments.risk.medium")}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  {translate("investments.dividend_description")}
+                </p>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{translate("investments.expected_return")}: 4-6%</span>
+                  <span className="text-amber-600 dark:text-amber-400">
+                    {translate("investments.recommended_allocation")}: 30%
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="amount">Monto</Label>
-              <Input
-                id="amount"
-                type="number"
-                value={newInvestmentAmount}
-                onChange={(e) => setNewInvestmentAmount(e.target.value)}
-                placeholder="1000"
-              />
-            </div>
-          </div>
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setShowAddInvestmentDialog(false)}>
-              Cancelar
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white">
+              {translate("investments.explore_recommendations")}
             </Button>
-            <Button onClick={addInvestment}>Añadir</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </CardFooter>
+        </Card>
+      </motion.div>
     </div>
   )
 }
-

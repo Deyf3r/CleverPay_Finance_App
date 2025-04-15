@@ -31,18 +31,24 @@ import {
   WalletIcon,
   BarChartIcon,
   CheckIcon,
+  AlertCircle,
+  InfoIcon as InfoCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { FinancialAdviceHub } from "@/components/financial-advice-hub"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function AIInsightsPage() {
   const { state } = useFinance()
   const { formatCurrency, translate } = useSettings()
   const [activeTab, setActiveTab] = useState("insights")
   const [isLoading, setIsLoading] = useState(true)
+
+  // Verificar si hay suficientes datos para análisis avanzado
+  const hasEnoughData = state.transactions.length >= 10
 
   // Estados para almacenar los resultados de los análisis
   const [expensePredictions, setExpensePredictions] = useState<any[]>([])
@@ -162,6 +168,19 @@ export default function AIInsightsPage() {
               {translate("dashboard.back")}
             </Link>
           </Button>
+        </div>
+
+        {!hasEnoughData && (
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{translate("ai.insufficient_data_title")}</AlertTitle>
+            <AlertDescription>{translate("ai.insufficient_data_description")}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="mb-6 text-sm text-muted-foreground">
+          <InfoCircle className="h-4 w-4 inline mr-2" />
+          {translate("ai.data_analysis_explanation")}
         </div>
 
         <Tabs defaultValue="insights" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -690,4 +709,3 @@ export default function AIInsightsPage() {
     </div>
   )
 }
-

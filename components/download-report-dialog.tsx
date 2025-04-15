@@ -182,4 +182,3 @@ export function DownloadReportDialog({ open, onOpenChange }: DownloadReportDialo
     </Dialog>
   )
 }
-
