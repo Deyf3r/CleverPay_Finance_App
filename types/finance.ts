@@ -57,6 +57,7 @@ export interface FinanceState {
 // Tipo para el contexto de finanzas
 export interface FinanceContextType {
   state: FinanceState
+  isLoading: boolean
   addTransaction: (transaction: Omit<Transaction, "id" | "userId" | "createdAt" | "updatedAt" | "tags">) => Promise<Transaction>
   editTransaction: (id: string, transaction: Omit<Transaction, "id" | "userId" | "createdAt" | "updatedAt" | "tags">) => Promise<Transaction>
   deleteTransaction: (id: string) => Promise<boolean>

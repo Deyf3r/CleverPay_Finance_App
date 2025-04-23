@@ -5,14 +5,87 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, TrendingUp, ShieldCheck, Wallet, CreditCard, ChevronRight, LineChart } from "lucide-react"
 import { useSettings } from "@/context/settings-context"
+import { useFinance } from "@/context/finance-context"
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
 export function FinancialAdviceHub() {
   const { translate, formatCurrency } = useSettings()
+  const { state, isLoading, getTotalIncome, getTotalExpenses, getSavingsRate } = useFinance()
   const router = useRouter()
   const [activeCard, setActiveCard] = useState<string | null>(null)
+  const [financialData, setFinancialData] = useState({
+    monthlyIncome: 3500,
+    recommendedSavings: 700,
+    currentSavings: 5000,
+    monthlyExpenses: 2500,
+    emergencyFundTarget: {
+      min: 7500,
+      max: 15000
+    },
+    currentEmergencyFund: 0,
+    recommendedInvestment: 200,
+    debtInfo: {
+      creditCard: { amount: 3500, interestRate: 18 },
+      personalLoan: { amount: 5000, interestRate: 8 }
+    }
+  })
+
+  // Calcular datos financieros basados en transacciones reales
+  useEffect(() => {
+    if (isLoading) return
+    
+    // Calcular ingresos mensuales
+    const totalIncome = getTotalIncome()
+    const monthlyIncome = totalIncome / Math.max(1, state.transactions.filter(t => t.type === "income").length) * 4
+    
+    // Calcular gastos mensuales
+    const totalExpenses = getTotalExpenses()
+    const monthlyExpenses = totalExpenses / Math.max(1, state.transactions.filter(t => t.type === "expense").length) * 4
+    
+    // Calcular ahorros recomendados (20% de los ingresos)
+    const recommendedSavings = monthlyIncome * 0.2
+    
+    // Calcular ahorros actuales (saldo total en cuentas de ahorro)
+    const currentSavings = state.accounts.savings?.balance || 0
+    
+    // Calcular objetivo de fondo de emergencia (3-6 meses de gastos)
+    const emergencyFundTarget = {
+      min: monthlyExpenses * 3,
+      max: monthlyExpenses * 6
+    }
+    
+    // Calcular fondo de emergencia actual
+    const currentEmergencyFund = state.accounts.savings?.balance || 0
+    
+    // Calcular inversión recomendada (5-10% de los ingresos)
+    const recommendedInvestment = monthlyIncome * 0.05
+    
+    // Obtener información de deudas
+    const debtInfo = {
+      creditCard: { 
+        amount: Math.abs(state.accounts.credit?.balance || 3500), 
+        interestRate: 18 
+      },
+      personalLoan: { 
+        amount: 5000, // Valor por defecto si no hay datos reales
+        interestRate: 8 
+      }
+    }
+    
+    setFinancialData({
+      monthlyIncome,
+      recommendedSavings,
+      currentSavings,
+      monthlyExpenses,
+      emergencyFundTarget,
+      currentEmergencyFund,
+      recommendedInvestment,
+      debtInfo
+    })
+    
+  }, [isLoading, state.transactions, state.accounts, getTotalIncome, getTotalExpenses])
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -160,12 +233,12 @@ export function FinancialAdviceHub() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{translate("ai.current_savings")}</span>
-                  <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(5000)}</span>
+                  <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(financialData.currentSavings)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{translate("ai.recommended_amount")}</span>
                   <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(200)} / {translate("ai.per_month")}
+                    {formatCurrency(financialData.recommendedInvestment)} / {translate("ai.per_month")}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -229,17 +302,17 @@ export function FinancialAdviceHub() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{translate("dashboard.monthly_expenses")}</span>
-                  <span className="font-medium text-amber-600 dark:text-amber-400">{formatCurrency(2500)}</span>
+                  <span className="font-medium text-amber-600 dark:text-amber-400">{formatCurrency(financialData.monthlyExpenses)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{translate("ai.recommended_amount")}</span>
                   <span className="font-medium text-amber-600 dark:text-amber-400">
-                    {formatCurrency(7500)} - {formatCurrency(15000)}
+                    {formatCurrency(financialData.emergencyFundTarget.min)} - {formatCurrency(financialData.emergencyFundTarget.max)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{translate("ai.current_savings")}</span>
-                  <span className="font-medium text-rose-600 dark:text-rose-400">{formatCurrency(0)}</span>
+                  <span className="font-medium text-rose-600 dark:text-rose-400">{formatCurrency(financialData.currentEmergencyFund)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{translate("ai.goal_timeline")}</span>
@@ -294,13 +367,13 @@ export function FinancialAdviceHub() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{translate("dashboard.income")}</span>
                   <span className="font-medium text-purple-600 dark:text-purple-400">
-                    {formatCurrency(3500)} / {translate("ai.per_month")}
+                    {formatCurrency(financialData.monthlyIncome)} / {translate("ai.per_month")}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{translate("ai.recommended_amount")}</span>
                   <span className="font-medium text-purple-600 dark:text-purple-400">
-                    {formatCurrency(350)} / {translate("ai.per_month")}
+                    {formatCurrency(financialData.recommendedSavings)} / {translate("ai.per_month")}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -371,9 +444,9 @@ export function FinancialAdviceHub() {
                     <span className="text-sm font-medium">{translate("debt.credit_card")}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-medium text-rose-600 dark:text-rose-400">{formatCurrency(3500)}</span>
+                    <span className="font-medium text-rose-600 dark:text-rose-400">{formatCurrency(financialData.debtInfo.creditCard.amount)}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                      18% {translate("debt.interest_rate")}
+                      {financialData.debtInfo.creditCard.interestRate}% {translate("debt.interest_rate")}
                     </span>
                   </div>
                 </div>
@@ -388,9 +461,9 @@ export function FinancialAdviceHub() {
                     <span className="text-sm font-medium">{translate("debt.personal_loan")}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-medium text-amber-600 dark:text-amber-400">{formatCurrency(5000)}</span>
+                    <span className="font-medium text-amber-600 dark:text-amber-400">{formatCurrency(financialData.debtInfo.personalLoan.amount)}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                      8% {translate("debt.interest_rate")}
+                      {financialData.debtInfo.personalLoan.interestRate}% {translate("debt.interest_rate")}
                     </span>
                   </div>
                 </div>

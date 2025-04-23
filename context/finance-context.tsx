@@ -19,25 +19,51 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       cash: { balance: 0, name: "Cash" },
     },
   })
+  const [isLoading, setIsLoading] = useState(true)
 
   // Cargar datos al iniciar
   useEffect(() => {
     // Cargar transacciones de la API
     const fetchTransactions = async () => {
       try {
+        setIsLoading(true)
         const response = await fetch("/api/transactions")
         if (!response.ok) {
           const errorText = await response.text()
           throw new Error(errorText || "Error al cargar las transacciones")
         }
         const data = await response.json()
+        
+        // Calcular saldos de cuentas basados en las transacciones
+        const accountBalances = {
+          checking: { balance: 0, name: "Checking Account" },
+          savings: { balance: 0, name: "Savings Account" },
+          credit: { balance: 0, name: "Credit Card" },
+          cash: { balance: 0, name: "Cash" },
+        };
+        
+        // Actualizar saldos basados en transacciones
+        data.forEach((transaction: Transaction) => {
+          const accountType = transaction.account as AccountType;
+          if (accountBalances[accountType]) {
+            if (transaction.type === "income") {
+              accountBalances[accountType].balance += transaction.amount;
+            } else if (transaction.type === "expense") {
+              accountBalances[accountType].balance -= transaction.amount;
+            }
+          }
+        });
+        
         setState(prev => ({
           ...prev,
-          transactions: data
+          transactions: data,
+          accounts: accountBalances
         }))
       } catch (error) {
         console.error("Error loading transactions:", error)
         toast.error("Error al cargar las transacciones")
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -61,10 +87,26 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       const newTransaction = await response.json()
-      setState(prev => ({
-        ...prev,
-        transactions: [newTransaction, ...prev.transactions]
-      }))
+      
+      // Actualizar el saldo de la cuenta
+      setState(prev => {
+        // Crear una copia del estado actual
+        const updatedAccounts = { ...prev.accounts };
+        const accountType = transaction.account as AccountType;
+        
+        // Actualizar el saldo según el tipo de transacción
+        if (transaction.type === "income") {
+          updatedAccounts[accountType].balance += transaction.amount;
+        } else if (transaction.type === "expense") {
+          updatedAccounts[accountType].balance -= transaction.amount;
+        }
+        
+        return {
+          ...prev,
+          transactions: [newTransaction, ...prev.transactions],
+          accounts: updatedAccounts
+        }
+      })
 
       return newTransaction
     } catch (error) {
@@ -91,10 +133,59 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       const updatedTransaction: Transaction = await response.json()
-      setState(prev => ({
-        ...prev,
-        transactions: prev.transactions.map(t => t.id === id ? updatedTransaction : t)
-      }))
+      
+      setState(prev => {
+        // Encontrar la transacción original
+        const originalTransaction = prev.transactions.find(t => t.id === id);
+        if (!originalTransaction) {
+          return {
+            ...prev,
+            transactions: prev.transactions.map(t => t.id === id ? updatedTransaction : t)
+          };
+        }
+        
+        // Crear una copia del estado actual
+        const updatedAccounts = { ...prev.accounts };
+        
+        // Si la cuenta ha cambiado, actualizar ambas cuentas
+        if (originalTransaction.account !== transaction.account) {
+          // Revertir el efecto de la transacción original
+          if (originalTransaction.type === "income") {
+            updatedAccounts[originalTransaction.account as AccountType].balance -= originalTransaction.amount;
+          } else if (originalTransaction.type === "expense") {
+            updatedAccounts[originalTransaction.account as AccountType].balance += originalTransaction.amount;
+          }
+          
+          // Aplicar el efecto de la nueva transacción
+          if (transaction.type === "income") {
+            updatedAccounts[transaction.account as AccountType].balance += transaction.amount;
+          } else if (transaction.type === "expense") {
+            updatedAccounts[transaction.account as AccountType].balance -= transaction.amount;
+          }
+        } 
+        // Si la cuenta es la misma pero el monto o tipo ha cambiado
+        else if (originalTransaction.amount !== transaction.amount || originalTransaction.type !== transaction.type) {
+          // Revertir el efecto de la transacción original
+          if (originalTransaction.type === "income") {
+            updatedAccounts[originalTransaction.account as AccountType].balance -= originalTransaction.amount;
+          } else if (originalTransaction.type === "expense") {
+            updatedAccounts[originalTransaction.account as AccountType].balance += originalTransaction.amount;
+          }
+          
+          // Aplicar el efecto de la nueva transacción
+          if (transaction.type === "income") {
+            updatedAccounts[transaction.account as AccountType].balance += transaction.amount;
+          } else if (transaction.type === "expense") {
+            updatedAccounts[transaction.account as AccountType].balance -= transaction.amount;
+          }
+        }
+        
+        return {
+          ...prev,
+          transactions: prev.transactions.map(t => t.id === id ? updatedTransaction : t),
+          accounts: updatedAccounts
+        };
+      });
 
       return updatedTransaction
     } catch (error) {
@@ -107,6 +198,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Delete a transaction
   const deleteTransaction = async (id: string) => {
     try {
+      // Encontrar la transacción antes de eliminarla
+      const transactionToDelete = state.transactions.find(t => t.id === id);
+      if (!transactionToDelete) {
+        throw new Error("Transaction not found");
+      }
+      
       const response = await fetch(`/api/transactions/${id}`, {
         method: "DELETE",
       })
@@ -116,10 +213,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         throw new Error(errorText || "Error al eliminar la transacción")
       }
 
-      setState(prev => ({
-        ...prev,
-        transactions: prev.transactions.filter(t => t.id !== id)
-      }))
+      setState(prev => {
+        // Crear una copia del estado actual
+        const updatedAccounts = { ...prev.accounts };
+        
+        // Revertir el efecto de la transacción en el saldo de la cuenta
+        if (transactionToDelete.type === "income") {
+          updatedAccounts[transactionToDelete.account as AccountType].balance -= transactionToDelete.amount;
+        } else if (transactionToDelete.type === "expense") {
+          updatedAccounts[transactionToDelete.account as AccountType].balance += transactionToDelete.amount;
+        }
+        
+        return {
+          ...prev,
+          transactions: prev.transactions.filter(t => t.id !== id),
+          accounts: updatedAccounts
+        };
+      });
 
       return true
     } catch (error) {
@@ -353,6 +463,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const value = {
     state,
+    isLoading,
     addTransaction,
     editTransaction,
     deleteTransaction,

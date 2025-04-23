@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useFinance } from "@/context/finance-context"
 import { useSettings } from "@/context/settings-context"
 import { format, parseISO } from "date-fns"
@@ -14,7 +14,7 @@ interface AccountTransactionsProps {
 }
 
 export function AccountTransactions({ accountType }: AccountTransactionsProps) {
-  const { state } = useFinance()
+  const { state, isLoading } = useFinance()
   const { formatCurrency } = useSettings()
   const [searchTerm, setSearchTerm] = useState("")
   const [transactionType, setTransactionType] = useState<string>("all")
@@ -30,8 +30,8 @@ export function AccountTransactions({ accountType }: AccountTransactionsProps) {
     .filter((transaction) => {
       const matchesSearch =
         searchTerm === "" ||
-        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchTerm.toLowerCase())
+        (transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+        (transaction.category?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
 
       const matchesType = transactionType === "all" || transaction.type === transactionType
 
@@ -39,12 +39,19 @@ export function AccountTransactions({ accountType }: AccountTransactionsProps) {
     })
     .slice(0, limit)
 
-  const formatDate = (dateString: string) => {
-    return format(parseISO(dateString), "MMM d, yyyy")
+  const formatDate = (dateString: string | Date) => {
+    if (typeof dateString === 'string') {
+      return format(parseISO(dateString), "MMM d, yyyy")
+    }
+    return format(dateString, "MMM d, yyyy")
   }
 
   const getCategoryLabel = (category: string) => {
     return category
+  }
+
+  if (isLoading) {
+    return <div className="text-center py-8 text-muted-foreground">Loading...</div>
   }
 
   if (transactions.filter((t) => t.account === accountType).length === 0) {
@@ -91,9 +98,9 @@ export function AccountTransactions({ accountType }: AccountTransactionsProps) {
             <TableBody>
               {filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
-                  <TableCell className="font-medium">{formatDate(transaction.date)}</TableCell>
-                  <TableCell>{transaction.description}</TableCell>
-                  <TableCell>{getCategoryLabel(transaction.category)}</TableCell>
+                  <TableCell className="font-medium">{formatDate(transaction.date.toString())}</TableCell>
+                  <TableCell>{transaction.description || "-"}</TableCell>
+                  <TableCell>{getCategoryLabel(transaction.category || "-")}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end">
                       {transaction.type === "income" ? (

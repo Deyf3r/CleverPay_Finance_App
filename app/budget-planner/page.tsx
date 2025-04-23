@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,32 +10,69 @@ import { Progress } from "@/components/ui/progress"
 import { PieChart, ArrowLeft, Plus, Trash2, DollarSign, Percent, Save, Calculator } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useSettings } from "@/context/settings-context"
+import { useFinance } from "@/context/finance-context"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
+import { PieChartComponent } from "@/components/charts/pie-chart"
 
 interface Category {
   name: string
   percentage: number
   amount: number
   suggested: number
+  actual?: number
 }
 
 export default function BudgetPlannerPage() {
   const router = useRouter()
   const { translate, formatCurrency } = useSettings()
+  const { state, isLoading, getTotalIncome, getTotalExpenses } = useFinance()
   const [activeTab, setActiveTab] = useState("overview")
   const [monthlyIncome, setMonthlyIncome] = useState("3500")
   const [savingsGoal, setSavingsGoal] = useState("20")
+  const [budgetSaved, setBudgetSaved] = useState(false)
 
-  // Sample budget data
-  const [categories, setCategories] = useState<Category[]>([
-    { name: translate("category.housing"), percentage: 30, amount: 1050, suggested: 1050 },
-    { name: translate("category.food"), percentage: 15, amount: 525, suggested: 525 },
-    { name: translate("category.transportation"), percentage: 10, amount: 350, suggested: 350 },
-    { name: translate("category.utilities"), percentage: 10, amount: 350, suggested: 350 },
-    { name: translate("category.entertainment"), percentage: 5, amount: 175, suggested: 175 },
-    { name: translate("category.savings"), percentage: 20, amount: 700, suggested: 700 },
-    { name: translate("category.other"), percentage: 10, amount: 350, suggested: 350 },
-  ])
+  // Calcular gastos reales por categoría basados en transacciones
+  const calculateActualSpending = () => {
+    const categorySpending: { [key: string]: number } = {}
+    
+    // Filtrar solo transacciones de gastos
+    const expenses = state.transactions.filter(t => t.type === "expense")
+    
+    // Agrupar gastos por categoría
+    expenses.forEach(transaction => {
+      const category = transaction.category || "other"
+      if (!categorySpending[category]) {
+        categorySpending[category] = 0
+      }
+      categorySpending[category] += transaction.amount
+    })
+    
+    return categorySpending
+  }
+
+  // Sample budget data with actual spending
+  const [categories, setCategories] = useState<Category[]>([])
+
+  // Inicializar categorías con datos reales cuando se cargan las transacciones
+  useEffect(() => {
+    if (!isLoading) {
+      const actualSpending = calculateActualSpending()
+      const income = parseFloat(monthlyIncome)
+      
+      const initialCategories: Category[] = [
+        { name: "Vivienda", percentage: 30, amount: income * 0.3, suggested: income * 0.3, actual: actualSpending["housing"] || 0 },
+        { name: "Alimentación", percentage: 15, amount: income * 0.15, suggested: income * 0.15, actual: actualSpending["food"] || 0 },
+        { name: "Transporte", percentage: 10, amount: income * 0.1, suggested: income * 0.1, actual: actualSpending["transportation"] || 0 },
+        { name: "Servicios", percentage: 10, amount: income * 0.1, suggested: income * 0.1, actual: actualSpending["utilities"] || 0 },
+        { name: "Entretenimiento", percentage: 5, amount: income * 0.05, suggested: income * 0.05, actual: actualSpending["entertainment"] || 0 },
+        { name: "Ahorros", percentage: 20, amount: income * 0.2, suggested: income * 0.2, actual: actualSpending["savings"] || 0 },
+        { name: "Otros", percentage: 10, amount: income * 0.1, suggested: income * 0.1, actual: actualSpending["other"] || 0 },
+      ]
+      
+      setCategories(initialCategories)
+    }
+  }, [isLoading, monthlyIncome, translate])
 
   const getProgressColor = (index: number) => {
     const colors = [
@@ -95,6 +132,43 @@ export default function BudgetPlannerPage() {
     setCategories(newCategories)
   }
 
+  const handleAddCategory = () => {
+    setCategories([
+      ...categories,
+      { name: "Nueva Categoría", percentage: 0, amount: 0, suggested: 0 }
+    ])
+  }
+
+  const handleDeleteCategory = (index: number) => {
+    const newCategories = [...categories]
+    newCategories.splice(index, 1)
+    setCategories(newCategories)
+  }
+
+  const handleSaveBudget = () => {
+    // Aquí se implementaría la lógica para guardar el presupuesto
+    // Por ahora solo mostramos un toast de confirmación
+    toast.success("Presupuesto guardado correctamente")
+    setBudgetSaved(true)
+  }
+
+  // Preparar datos para el gráfico de pastel
+  const pieChartData = categories.map((category, index) => ({
+    name: category.name,
+    value: category.percentage,
+    color: getProgressColor(index).replace('bg-', '').replace(' dark:bg-', '/')
+  }))
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-5xl">
+        <div className="flex justify-center items-center h-64">
+          <p className="text-muted-foreground">Cargando...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl">
       <div className="flex items-center justify-between mb-8">
@@ -104,14 +178,14 @@ export default function BudgetPlannerPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              {translate("budget.title")}
+              Planificador de Presupuesto
             </h1>
-            <p className="text-muted-foreground">{translate("budget.subtitle")}</p>
+            <p className="text-muted-foreground">Crea y gestiona tu presupuesto mensual</p>
           </div>
         </div>
         <Button
           className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-          onClick={() => router.push("/ai-insights")}
+          onClick={handleSaveBudget}
         >
           <Save className="mr-2 h-4 w-4" />
           Guardar Presupuesto
@@ -121,8 +195,8 @@ export default function BudgetPlannerPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader>
-            <CardTitle>{translate("budget.monthly_income")}</CardTitle>
-            <CardDescription>{translate("budget.monthly_income_description")}</CardDescription>
+            <CardTitle>Ingreso Mensual</CardTitle>
+            <CardDescription>Ingresa tu ingreso mensual total</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
@@ -139,8 +213,8 @@ export default function BudgetPlannerPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{translate("budget.savings_goal")}</CardTitle>
-            <CardDescription>{translate("budget.savings_goal_description")}</CardDescription>
+            <CardTitle>Meta de Ahorro</CardTitle>
+            <CardDescription>Porcentaje de tus ingresos que quieres ahorrar</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
@@ -157,21 +231,21 @@ export default function BudgetPlannerPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{translate("budget.calculator")}</CardTitle>
-            <CardDescription>{translate("budget.calculator_description")}</CardDescription>
+            <CardTitle>Calculadora</CardTitle>
+            <CardDescription>Resumen de tu presupuesto mensual</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">{translate("budget.monthly_income")}:</span>
+                <span className="text-sm text-muted-foreground">Ingreso Mensual:</span>
                 <span className="font-mono">{formatCurrency(parseFloat(monthlyIncome))}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">{translate("budget.savings_goal")}:</span>
+                <span className="text-sm text-muted-foreground">Meta de Ahorro:</span>
                 <span className="font-mono">{formatCurrency((parseFloat(monthlyIncome) * parseFloat(savingsGoal)) / 100)}</span>
               </div>
               <div className="flex justify-between font-medium">
-                <span className="text-sm">{translate("budget.disposable_income")}:</span>
+                <span className="text-sm">Ingreso Disponible:</span>
                 <span className="font-mono">
                   {formatCurrency(parseFloat(monthlyIncome) - (parseFloat(monthlyIncome) * parseFloat(savingsGoal)) / 100)}
                 </span>
@@ -183,20 +257,24 @@ export default function BudgetPlannerPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="overview">{translate("budget.overview")}</TabsTrigger>
-          <TabsTrigger value="detailed">{translate("budget.detailed")}</TabsTrigger>
+          <TabsTrigger value="overview">Resumen</TabsTrigger>
+          <TabsTrigger value="detailed">Detallado</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
           <Card>
             <CardHeader>
-              <CardTitle>{translate("budget.distribution")}</CardTitle>
-              <CardDescription>{translate("budget.distribution_description")}</CardDescription>
+              <CardTitle>Distribución del Presupuesto</CardTitle>
+              <CardDescription>Cómo se distribuye tu presupuesto por categorías</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-8">
-                <div className="aspect-square max-w-sm mx-auto">
-                  <PieChart className="w-full h-full text-muted-foreground" />
+                <div className="aspect-square max-w-sm mx-auto h-[350px]">
+                  {categories.length > 0 ? (
+                    <PieChartComponent data={pieChartData} />
+                  ) : (
+                    <PieChart className="w-full h-full text-muted-foreground" />
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -216,9 +294,16 @@ export default function BudgetPlannerPage() {
                         />
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>{formatCurrency(category.amount)}</span>
-                          <span>
-                            {translate("budget.suggested")}: {formatCurrency(category.suggested)}
-                          </span>
+                          <div className="flex gap-2">
+                            {category.actual !== undefined && (
+                              <span className={category.actual > category.amount ? "text-rose-500" : "text-emerald-500"}>
+                                Actual: {formatCurrency(category.actual)}
+                              </span>
+                            )}
+                            <span>
+                              Sugerido: {formatCurrency(category.suggested)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -231,7 +316,7 @@ export default function BudgetPlannerPage() {
                 className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
                 onClick={() => setActiveTab("detailed")}
               >
-                {translate("budget.customize")}
+                Personalizar
               </Button>
             </CardFooter>
           </Card>
@@ -240,15 +325,15 @@ export default function BudgetPlannerPage() {
         <TabsContent value="detailed" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>{translate("budget.categories")}</CardTitle>
-              <CardDescription>{translate("budget.categories_description")}</CardDescription>
+              <CardTitle>Categorías</CardTitle>
+              <CardDescription>Personaliza las categorías de tu presupuesto</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="grid grid-cols-12 gap-4 font-medium text-sm text-muted-foreground">
-                  <div className="col-span-5">{translate("budget.category")}</div>
-                  <div className="col-span-3">{translate("budget.percentage")}</div>
-                  <div className="col-span-3">{translate("budget.amount")}</div>
+                  <div className="col-span-5">Categoría</div>
+                  <div className="col-span-3">Porcentaje</div>
+                  <div className="col-span-3">Monto</div>
                   <div className="col-span-1"></div>
                 </div>
 
@@ -275,25 +360,33 @@ export default function BudgetPlannerPage() {
                       />
                     </div>
                     <div className="col-span-1">
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDeleteCategory(index)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 ))}
 
-                <Button variant="outline" className="w-full mt-4" size="sm">
+                <Button variant="outline" className="w-full mt-4" size="sm" onClick={handleAddCategory}>
                   <Plus className="h-4 w-4 mr-2" />
-                  {translate("budget.add_category")}
+                  Añadir Categoría
                 </Button>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row gap-4">
               <Button variant="outline" className="w-full sm:w-auto" onClick={() => setActiveTab("overview")}>
-                {translate("budget.back_to_overview")}
+                Volver al Resumen
               </Button>
-              <Button className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white">
-                {translate("budget.save_budget")}
+              <Button 
+                className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                onClick={handleSaveBudget}
+              >
+                Guardar Presupuesto
               </Button>
             </CardFooter>
           </Card>

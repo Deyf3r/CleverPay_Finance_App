@@ -1,4 +1,4 @@
-// File: C:\Users\theka\Documents\CleverPay V1.1.5\app\layout.tsx
+// File: C:\Users\theka\CleverPay\CleverPay_Finance_App\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

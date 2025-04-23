@@ -768,9 +768,6 @@ video {
   margin-top: 0.75rem;
   margin-bottom: 0.75rem;
 }
-.-ml-1 {
-  margin-left: -0.25rem;
-}
 .-ml-4 {
   margin-left: -1rem;
 }
@@ -993,6 +990,9 @@ video {
 }
 .h-svh {
   height: 100svh;
+}
+.h-\[350px\] {
+  height: 350px;
 }
 .max-h-20 {
   max-height: 5rem;
@@ -1681,6 +1681,9 @@ video {
 .border-input {
   border-color: hsl(var(--input));
 }
+.border-muted-foreground\/50 {
+  border-color: hsl(var(--muted-foreground) / 0.5);
+}
 .border-orange-200 {
   --tw-border-opacity: 1;
   border-color: rgb(254 215 170 / var(--tw-border-opacity, 1));
@@ -1823,10 +1826,6 @@ video {
 }
 .bg-blue-500\/20 {
   background-color: rgb(59 130 246 / 0.2);
-}
-.bg-blue-600 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(37 99 235 / var(--tw-bg-opacity, 1));
 }
 .bg-border {
   background-color: hsl(var(--border));
@@ -1976,10 +1975,6 @@ video {
 }
 .bg-red-500\/20 {
   background-color: rgb(239 68 68 / 0.2);
-}
-.bg-red-600 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(220 38 38 / var(--tw-bg-opacity, 1));
 }
 .bg-rose-100 {
   --tw-bg-opacity: 1;
@@ -2768,9 +2763,6 @@ video {
 .lowercase {
   text-transform: lowercase;
 }
-.capitalize {
-  text-transform: capitalize;
-}
 .tabular-nums {
   --tw-numeric-spacing: tabular-nums;
   font-variant-numeric: var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction);
@@ -2990,6 +2982,9 @@ video {
 }
 .text-secondary-foreground {
   color: hsl(var(--secondary-foreground));
+}
+.text-secondary-foreground\/70 {
+  color: hsl(var(--secondary-foreground) / 0.7);
 }
 .text-sky-400 {
   --tw-text-opacity: 1;
@@ -4015,11 +4010,6 @@ video {
   background-color: rgb(180 83 9 / var(--tw-bg-opacity, 1));
 }
 
-.hover\:bg-blue-700:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(29 78 216 / var(--tw-bg-opacity, 1));
-}
-
 .hover\:bg-destructive\/80:hover {
   background-color: hsl(var(--destructive) / 0.8);
 }
@@ -4075,11 +4065,6 @@ video {
 .hover\:bg-red-600:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(220 38 38 / var(--tw-bg-opacity, 1));
-}
-
-.hover\:bg-red-700:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(185 28 28 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:bg-rose-100:hover {
@@ -4268,6 +4253,10 @@ video {
   color: rgb(190 18 60 / var(--tw-text-opacity, 1));
 }
 
+.hover\:text-secondary-foreground:hover {
+  color: hsl(var(--secondary-foreground));
+}
+
 .hover\:text-sky-300:hover {
   --tw-text-opacity: 1;
   color: rgb(125 211 252 / var(--tw-text-opacity, 1));
@@ -4289,6 +4278,10 @@ video {
 
 .hover\:opacity-100:hover {
   opacity: 1;
+}
+
+.hover\:opacity-80:hover {
+  opacity: 0.8;
 }
 
 .hover\:shadow-\[0_0_0_1px_hsl\(var\(--sidebar-accent\)\)\]:hover {

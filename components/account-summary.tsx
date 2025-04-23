@@ -12,7 +12,7 @@ interface AccountSummaryProps {
 }
 
 export function AccountSummary({ accountType }: AccountSummaryProps) {
-  const { state } = useFinance()
+  const { state, isLoading } = useFinance()
   const { formatCurrency, translate } = useSettings()
   const { transactions } = state
 
@@ -26,12 +26,12 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
 
   // Filtrar transacciones por mes
   const currentMonthTransactions = accountTransactions.filter((t) => {
-    const date = parseISO(t.date)
+    const date = typeof t.date === 'string' ? parseISO(t.date) : new Date(t.date)
     return date >= currentMonth && date <= endOfMonth(currentDate)
   })
 
   const lastMonthTransactions = accountTransactions.filter((t) => {
-    const date = parseISO(t.date)
+    const date = typeof t.date === 'string' ? parseISO(t.date) : new Date(t.date)
     return date >= lastMonth && date < currentMonth
   })
 
@@ -90,6 +90,82 @@ export function AccountSummary({ accountType }: AccountSummaryProps) {
     "#F7C59F",
     "#9B5DE5",
   ]
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Monthly Comparison</CardTitle>
+              <CardDescription>
+                {format(currentMonth, "MMMM yyyy")} vs {format(lastMonth, "MMMM yyyy")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Income</span>
+                  <div className="flex items-center">
+                    <span className="font-medium text-emerald-500 dark:text-emerald-400">
+                      -
+                    </span>
+                  </div>
+                </div>
+                <Progress value={0} className="h-2" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Expenses</span>
+                  <div className="flex items-center">
+                    <span className="font-medium text-rose-500 dark:text-rose-400">
+                      -
+                    </span>
+                  </div>
+                </div>
+                <Progress value={0} className="h-2" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Net Flow</span>
+                  <span className="font-medium text-emerald-500 dark:text-emerald-400">
+                    -
+                  </span>
+                </div>
+                <Progress value={0} className="h-2" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Expense Categories</CardTitle>
+              <CardDescription>{format(currentMonth, "MMMM yyyy")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                Loading...
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="card">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Top Expenses</CardTitle>
+            <CardDescription>{format(currentMonth, "MMMM yyyy")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="text-center py-4 text-muted-foreground">Loading...</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

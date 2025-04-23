@@ -1,22 +1,159 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertTriangleIcon, InfoIcon } from "lucide-react"
+import { AlertTriangleIcon, InfoIcon, TrendingUpIcon, TrendingDownIcon } from "lucide-react"
 import { useSettings } from "@/context/settings-context"
+import { useFinance } from "@/context/finance-context"
 import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
+import { format, subMonths, parseISO } from "date-fns"
+import { useRouter } from "next/navigation"
 
 interface AnomalyProps {
-  anomalies: {
+  anomalies?: {
     category: string
     amount: number
     percentageIncrease: number
     averageAmount: number
     description: string
   }[]
+  useDynamicData?: boolean
 }
 
-export default function SpendingAnomalies({ anomalies }: AnomalyProps) {
+export default function SpendingAnomalies({ anomalies: propAnomalies, useDynamicData = true }: AnomalyProps) {
   const { formatCurrency, translate } = useSettings()
+  const { state, isLoading } = useFinance()
+  const router = useRouter()
+  const [anomalies, setAnomalies] = useState(propAnomalies || [])
+  const [isCalculating, setIsCalculating] = useState(useDynamicData && !propAnomalies)
+
+  // Calcular anomalías de gastos basadas en transacciones reales
+  useEffect(() => {
+    if (!useDynamicData || propAnomalies || isLoading) return
+
+    setIsCalculating(true)
+    
+    // Función para calcular anomalías
+    const calculateAnomalies = () => {
+      // Obtener fecha actual y fecha de hace 3 meses
+      const currentDate = new Date()
+      const threeMonthsAgo = subMonths(currentDate, 3)
+      
+      // Filtrar transacciones de gastos
+      const expenses = state.transactions.filter(t => t.type === "expense")
+      
+      // Agrupar gastos por categoría y por mes
+      const categoryMonthlySpending: Record<string, Record<string, number>> = {}
+      
+      expenses.forEach(transaction => {
+        const category = transaction.category || "other"
+        const transactionDate = typeof transaction.date === 'string' 
+          ? parseISO(transaction.date) 
+          : transaction.date
+        
+        // Solo considerar transacciones de los últimos 3 meses
+        if (transactionDate < threeMonthsAgo) return
+        
+        const month = format(transactionDate, "yyyy-MM")
+        
+        if (!categoryMonthlySpending[category]) {
+          categoryMonthlySpending[category] = {}
+        }
+        
+        if (!categoryMonthlySpending[category][month]) {
+          categoryMonthlySpending[category][month] = 0
+        }
+        
+        categoryMonthlySpending[category][month] += transaction.amount
+      })
+      
+      // Calcular anomalías
+      const currentMonth = format(currentDate, "yyyy-MM")
+      const detectedAnomalies = []
+      
+      for (const category in categoryMonthlySpending) {
+        const monthlyData = categoryMonthlySpending[category]
+        const currentMonthAmount = monthlyData[currentMonth] || 0
+        
+        // Si no hay gastos en el mes actual, no hay anomalía
+        if (currentMonthAmount === 0) continue
+        
+        // Calcular el promedio de los meses anteriores
+        let totalPreviousMonths = 0
+        let countPreviousMonths = 0
+        
+        for (const month in monthlyData) {
+          if (month !== currentMonth) {
+            totalPreviousMonths += monthlyData[month]
+            countPreviousMonths++
+          }
+        }
+        
+        // Si no hay datos de meses anteriores, no podemos calcular anomalías
+        if (countPreviousMonths === 0) continue
+        
+        const averageAmount = totalPreviousMonths / countPreviousMonths
+        
+        // Calcular el porcentaje de aumento
+        const percentageIncrease = ((currentMonthAmount - averageAmount) / averageAmount) * 100
+        
+        // Considerar como anomalía si el aumento es mayor al 30%
+        if (percentageIncrease > 30) {
+          detectedAnomalies.push({
+            category,
+            amount: currentMonthAmount,
+            percentageIncrease,
+            averageAmount,
+            description: getAnomalyDescription(category, percentageIncrease)
+          })
+        }
+      }
+      
+      // Ordenar anomalías por porcentaje de aumento (descendente)
+      return detectedAnomalies.sort((a, b) => b.percentageIncrease - a.percentageIncrease)
+    }
+    
+    // Generar descripciones personalizadas para las anomalías
+    const getAnomalyDescription = (category: string, percentageIncrease: number) => {
+      const descriptions = [
+        `Tus gastos en ${translate(`category.${category}`)} han aumentado un ${percentageIncrease.toFixed(0)}% respecto a tu promedio habitual.`,
+        `Has gastado más de lo normal en ${translate(`category.${category}`)} este mes.`,
+        `Se detectó un incremento significativo en tus gastos de ${translate(`category.${category}`)}.`
+      ]
+      
+      return descriptions[Math.floor(Math.random() * descriptions.length)]
+    }
+    
+    // Calcular anomalías
+    const calculatedAnomalies = calculateAnomalies()
+    setAnomalies(calculatedAnomalies)
+    setIsCalculating(false)
+  }, [state.transactions, isLoading, propAnomalies, useDynamicData, translate])
+
+  const getCategoryLabel = (category: string) => {
+    return translate(`category.${category}`)
+  }
+  
+  const handleCreateBudget = () => {
+    router.push("/budget-planner")
+  }
+
+  if (isLoading || isCalculating) {
+    return (
+      <Card className="card">
+        <CardHeader>
+          <CardTitle className="text-lg">{translate("ai.spending_anomalies")}</CardTitle>
+          <CardDescription>{translate("ai.unusual_patterns")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
+            <p>{translate("common.loading")}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (anomalies.length === 0) {
     return (
@@ -27,8 +164,8 @@ export default function SpendingAnomalies({ anomalies }: AnomalyProps) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
-            <div className="rounded-full bg-primary/10 p-3 mb-3">
-              <AlertTriangleIcon className="h-6 w-6 text-primary" />
+            <div className="rounded-full bg-emerald-100 dark:bg-emerald-900/30 p-3 mb-3">
+              <TrendingDownIcon className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
             </div>
             <p>{translate("ai.no_anomalies")}</p>
             <p className="text-sm mt-1">{translate("ai.consistent_patterns")}</p>
@@ -36,10 +173,6 @@ export default function SpendingAnomalies({ anomalies }: AnomalyProps) {
         </CardContent>
       </Card>
     )
-  }
-
-  const getCategoryLabel = (category: string) => {
-    return translate(`category.${category}`)
   }
 
   return (
@@ -88,6 +221,13 @@ export default function SpendingAnomalies({ anomalies }: AnomalyProps) {
               {index < anomalies.length - 1 && <div className="border-t border-border my-3"></div>}
             </div>
           ))}
+          
+          <Button 
+            onClick={handleCreateBudget}
+            className="w-full mt-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white"
+          >
+            {translate("budget.create_budget")}
+          </Button>
         </div>
       </CardContent>
     </Card>

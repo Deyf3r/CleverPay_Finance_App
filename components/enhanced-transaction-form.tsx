@@ -39,6 +39,7 @@ interface FormFields {
   type: "income" | "expense"
   date: Date
   category: string
+  account: AccountType
   isRecurring: boolean
   importance: number
   description?: string
@@ -52,6 +53,7 @@ const formSchema = z.object({
   type: z.enum(["income", "expense"] as const),
   date: z.date(),
   category: z.string(),
+  account: z.enum(["checking", "savings", "credit", "cash"] as const),
   isRecurring: z.boolean(),
   importance: z.number().min(1).max(5),
   description: z.string().optional(),
@@ -87,6 +89,7 @@ export function EnhancedTransactionForm() {
       isRecurring: false,
       importance: 3,
       tags: [],
+      account: "checking",
     },
   })
 
@@ -108,7 +111,7 @@ export function EnhancedTransactionForm() {
         type: values.type as TransactionType,
         category: values.category as TransactionCategory,
         date: values.date,
-        account: "checking" as AccountType,
+        account: values.account as AccountType,
         isRecurring: values.isRecurring || false,
         importance: values.importance || 3,
         description: values.description || null,
@@ -258,6 +261,30 @@ export function EnhancedTransactionForm() {
                             {category}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="account"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cuenta</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona una cuenta" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="checking">Cuenta corriente</SelectItem>
+                        <SelectItem value="savings">Cuenta de ahorros</SelectItem>
+                        <SelectItem value="credit">Tarjeta de crédito</SelectItem>
+                        <SelectItem value="cash">Efectivo</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

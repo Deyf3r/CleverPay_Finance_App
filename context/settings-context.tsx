@@ -303,20 +303,20 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "ai.months": "months",
     "ai.budget_optimization": "Budget Optimization",
     "ai.budget_explanation":
-      'You could reduce your spending in "Entertainment" by 15% without significantly affecting your lifestyle, saving approximately €75 per month.',
+      'You could reduce your spending in "Entertainment" by 15% without significantly affecting your lifestyle, saving approximately $75 per month.',
     "ai.investment_recommendation": "Recommended Investment",
     "ai.investment_explanation":
-      "With your current financial profile, you could consider investing €200 monthly in an index fund to build long-term wealth.",
+      "With your current financial profile, you could consider investing $200 monthly in an index fund to build long-term wealth.",
     "ai.investment_type": "Investment type",
     "ai.index_fund": "Index fund",
     "ai.time_horizon": "Time horizon",
     "ai.long_term": "Long term",
     "anomaly.additional_income": "Additional Income Detected",
-    "anomaly.income_explanation": "You've received an income of €350 that doesn't match your usual income patterns.",
+    "anomaly.income_explanation": "You've received an income of $350 that doesn't match your usual income patterns.",
     "anomaly.amount": "Amount",
     "anomaly.unused_subscription": "Unused Subscription",
     "anomaly.subscription_explanation":
-      "You're paying €12.99 monthly for a service you haven't used in the last 3 months.",
+      "You're paying $12.99 monthly for a service you haven't used in the last 3 months.",
     "anomaly.monthly_cost": "Monthly cost",
     "anomaly.last_used": "Last used",
     "anomaly.months_ago": "months ago",
@@ -332,34 +332,13 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
       "You are saving {percentage}% of your income. Consider increasing your savings rate to 20% to improve your financial health.",
     "savings.negative":
       "Your expenses exceed your income in the last 3 months. Consider reviewing your budget to avoid debt.",
-
-    // Financial Tips
-    "tips.financial_tips": "Financial Tips",
-    "tips.diversify_spending": "Diversify Your Spending",
-    "tips.diversify_spending_desc":
-      "Your {category} category represents a large portion of your expenses. Consider reviewing and diversifying your spending.",
-    "tips.create_budget": "Create a budget",
-    "tips.investment_opportunity": "Investment Opportunity",
-    "tips.investment_opportunity_desc":
-      "With your excellent savings rate, you could consider investing some of your savings for long-term growth.",
-    "tips.explore_investments": "Explore investment options",
-    "tips.emergency_fund": "Build an Emergency Fund",
-    "tips.emergency_fund_desc":
-      "Aim to save 3-6 months of expenses in an easily accessible account for unexpected situations.",
-    "tips.start_saving": "Start saving now",
-    "tips.automate_savings": "Automate Your Savings",
-    "tips.automate_savings_desc":
-      "Set up automatic transfers to your savings account on payday to make saving effortless.",
-    "tips.set_up_auto": "Set up automatic transfers",
-    "tips.reduce_debt": "Reduce High-Interest Debt",
-    "tips.reduce_debt_desc": "Focus on paying off high-interest debt first to save money on interest payments.",
-    "tips.debt_strategy": "Create a debt payoff strategy",
     "debt.credit_card": "Credit Card",
     "debt.personal_loan": "Personal Loan",
     "debt.reduction_strategy": "Debt Reduction Strategy",
     "debt.personalized_plan": "Personalized plan to get debt-free faster",
     "debt.strategy_recommendation": "Strategy Recommendation",
-    "debt.snowball_method": "Snowball Method: Pay off smallest debts first to gain psychological momentum.",
+    "debt.snowball_method":
+      "Snowball Method: Pay off smallest debts first to gain psychological momentum.",
     "debt.recommended_for_you": "Recommended for you",
     "debt.your_debts": "Your Debts",
     "debt.interest_rate": "interest rate",
@@ -409,6 +388,85 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
       "Automating your savings will help you reach your financial goals faster. Set up automatic transfers to your savings accounts to build financial discipline.",
     "tips.debt_explanation":
       "Your credit card has an 18% interest rate. Prioritize paying this debt before others with lower interest to save money in the long run and improve your financial health. Every dollar you pay in interest is one less dollar for your financial goals.",
+
+    // Financial Tips
+    "tips.financial_tips": "Financial Tips",
+    "tips.diversify_spending": "Diversify Your Spending",
+    "tips.diversify_spending_desc":
+      "Your {category} category represents a large portion of your expenses. Consider reviewing and diversifying your spending.",
+    "tips.create_budget": "Create a budget",
+    "tips.investment_opportunity": "Investment Opportunity",
+    "tips.investment_opportunity_desc":
+      "With your excellent savings rate, you could consider investing some of your savings for long-term growth.",
+    "tips.explore_investments": "Explore investment options",
+    "tips.emergency_fund": "Build an Emergency Fund",
+    "tips.emergency_fund_desc":
+      "Aim to save 3-6 months of expenses in an easily accessible account for unexpected situations.",
+    "tips.start_saving": "Start saving now",
+    "tips.automate_savings": "Automate Your Savings",
+    "tips.automate_savings_desc":
+      "Set up automatic transfers to your savings account on payday to make saving effortless.",
+    "tips.set_up_auto": "Set up automatic transfers",
+    "tips.reduce_debt": "Reduce High-Interest Debt",
+    "tips.reduce_debt_desc": "Focus on paying off high-interest debt first to save money on interest payments.",
+    "tips.debt_strategy": "Create a debt payoff strategy",
+    "debt.credit_card": "Credit Card",
+    "debt.personal_loan": "Personal Loan",
+    "debt.reduction_strategy": "Debt Reduction Strategy",
+    "debt.personalized_plan": "Personalized plan to get debt-free faster",
+    "debt.strategy_recommendation": "Strategy Recommendation",
+    "debt.snowball_method":
+      "Snowball Method: Pay off smallest debts first to gain psychological momentum.",
+    "debt.recommended_for_you": "Recommended for you",
+    "debt.your_debts": "Your Debts",
+    "debt.interest_rate": "interest rate",
+    "debt.high_priority": "High Priority",
+    "debt.medium_priority": "Medium Priority",
+    "debt.steps_to_reduce": "Steps to Reduce Your Debt",
+    "debt.prioritize": "Prioritize your debts",
+    "debt.focus_highest_interest": "Focus first on the credit card with 18% interest.",
+    "debt.minimum_payments": "Minimum payment on all",
+    "debt.make_minimum": "Make the minimum payment on all your debts to avoid late fees.",
+    "debt.extra_payments": "Extra payments to priority debt",
+    "debt.allocate_extra": "Allocate any extra money to the highest interest debt.",
+    "debt.move_to_next": "Move to the next one",
+    "debt.after_paying_first": "Once the first debt is paid off, direct that payment to the next one.",
+    "debt.create_strategy": "Create Debt Strategy",
+    "debt.debt_reduction_strategy": "Debt Reduction Strategy",
+    "debt.reduce_high_interest": "Reduce High-Interest Debt",
+    "debt.credit_card_explanation":
+      "Your credit card has an 18% interest rate. Prioritize paying this debt before others with lower interest to save money in the long run.",
+    "debt.prioritize_your_debts": "Prioritize your debts",
+    "debt.focus_first_credit_card": "Focus first on the credit card with 18% interest.",
+    "debt.minimum_payment_on_all": "Minimum payment on all",
+    "debt.make_minimum_payment": "Make the minimum payment on all your debts to avoid late fees.",
+    "debt.extra_payments_to_priority": "Extra payments to priority debt",
+    "debt.allocate_extra_money": "Allocate any extra money to the highest interest debt.",
+    "debt.move_to_the_next": "Move to the next one",
+    "debt.once_first_debt_paid": "Once the first debt is paid off, direct that payment to the next one.",
+    "debt.create_payment_strategy": "Create Payment Strategy",
+    "ai.data_analysis_explanation":
+      "Based on your financial data, we've analyzed patterns to provide personalized insights.",
+    "category.savings": "Savings",
+    "common.back_to_advice": "Back to Financial Advice",
+    "common.spending": "Spending",
+    "common.income": "Income",
+    "common.savings": "Savings",
+    "common.show_details": "Show Details",
+    "common.hide_details": "Hide Details",
+    "common.view_full_analysis": "View Full Analysis",
+
+    "tips.budget_explanation":
+      "80% of your expenses are in housing. Consider redistributing your budget for more financial flexibility and to avoid problems if your income changes.",
+    "tips.investment_explanation":
+      "With your current savings, you could consider low-risk investments that generate better returns than a traditional savings account and protect you from inflation.",
+    "tips.emergency_explanation":
+      "It's recommended to have at least 3-6 months of expenses saved for emergencies. Currently you don't have savings for this purpose, which makes you vulnerable to unexpected events.",
+    "tips.automation_explanation":
+      "Automating your savings will help you reach your financial goals faster. Set up automatic transfers to your savings accounts to build financial discipline.",
+    "tips.debt_explanation":
+      "Your credit card has an 18% interest rate. Prioritize paying this debt before others with lower interest to save money in the long run and improve your financial health. Every dollar you pay in interest is one less dollar for your financial goals.",
+
     // Settings
     "settings.title": "Settings",
     "settings.preferences": "Preferences",
@@ -756,100 +814,15 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "dashboard.performance": "Performance",
     "dashboard.allocation": "Asset Allocation",
 
-    // Traducciones para los componentes de automatización y consejos financieros
-    "automation.subtitle": "Set up automatic transfers to reach your goals faster",
-    "automation.setup_autosave": "Set Up Automatic Savings",
-    "automation.setup_description": "Configure recurring transfers to your savings account",
-    "automation.frequency": "Frequency",
-    "automation.select_frequency": "Select frequency",
-    "automation.weekly": "Weekly",
-    "automation.biweekly": "Bi-weekly",
-    "automation.monthly": "Monthly",
-    "automation.quarterly": "Quarterly",
-    "automation.target_goal": "Target Goal",
-    "automation.select_goal": "Select goal",
-    "automation.auto_adjust": "Auto Adjust Savings",
-    "automation.auto_adjust_description": "Automatically adjust savings amount based on income",
-    "automation.summary": "Summary",
-    "automation.estimated_results": "Estimated results based on your setup",
-    "automation.monthly_saving": "Monthly Saving",
-    "automation.yearly_saving": "Yearly Saving",
-    "automation.goal_target": "Goal Target",
-    "automation.time_to_goal": "Time to Goal",
-    "automation.benefit_title": "Automate Your Financial Success",
-    "automation.benefit_description":
-      "By setting up automatic savings, you're more likely to stick to your plan and reach your goals faster",
-    "automation.setup_autosave": "Set Up Automatic Savings",
-    "automation.tips_title": "Tips for Successful Automation",
-    "automation.tips_description": "Make the most of your automated savings plan",
-    "automation.tip_1_title": "Start Small and Increase Gradually",
-    "automation.tip_1_description": "Begin with a comfortable amount and gradually increase it as your income grows",
-    "automation.tip_2_title": "Time Transfers with Payday",
-    "automation.tip_2_description": "Schedule transfers to happen right after you get paid to ensure consistency",
-    "automation.tip_3_title": "Review and Adjust Regularly",
-    "automation.tip_3_description": "Review your automated savings every 3-6 months and adjust as needed",
-
-    // Traducciones para metas financieras
-    "goals.emergency_fund": "Emergency Fund",
-    "goals.vacation": "Vacation",
-    "goals.down_payment": "Home Down Payment",
-    "goals.retirement": "Retirement",
-    "goals.education": "Education",
-
-    // Traducciones para inversiones
-    "investments.title": "Investment Portfolio",
-    "investments.subtitle": "Manage and track your investments",
-    "investments.portfolio_summary": "Portfolio Summary",
-    "investments.current_investments": "Current investment holdings",
-    "investments.total_value": "Total Value",
-    "investments.average_return": "Average Return",
-    "investments.projected_value": "Projected Value",
-    "investments.in_years": "In 5 years",
-    "investments.this_month": "This month",
-    "investments.last_year": "Last year",
-    "investments.overview": "Overview",
-    "investments.your_investments": "Your Investments",
-    "investments.current_holdings": "Current investment holdings",
-    "investments.view_allocation": "View Asset Allocation",
-    "investments.portfolio_distribution": "How your portfolio is distributed",
-    "investments.total": "Total",
-    "investments.view_performance": "View Performance",
-    "investments.historical_returns": "Historical investment returns",
-    "investments.back_to_overview": "Back to Overview",
-    "investments.stock_fund": "Stock Index Fund",
-    "investments.bond_fund": "Bond Fund",
-    "investments.real_estate": "Real Estate",
-    "investments.cash": "Cash",
-    "investments.risk.very_low": "Very Low Risk",
-    "investments.risk.low": "Low Risk",
-    "investments.risk.medium": "Medium Risk",
-    "investments.risk.high": "High Risk",
-    "investments.risk.very_high": "Very High Risk",
-    "investments.ytd_return": "YTD Return",
-    "investments.one_year_return": "1 Year Return",
-    "investments.three_year_return": "3 Year Return",
-    "investments.five_year_return": "5 Year Return",
-    "investments.opportunities": "Investment Opportunities",
-    "investments.personalized_recommendations": "Personalized recommendations based on your profile",
-    "investments.index_fund_recommendation": "S&P 500 Index Fund",
-    "investments.index_fund_description": "Low-cost fund that tracks the performance of the S&P 500 index",
-    "investments.dividend_stocks": "Dividend Stocks",
-    "investments.dividend_description": "Companies that regularly distribute a portion of earnings to shareholders",
-    "investments.expected_return": "Expected Return",
-    "investments.recommended_allocation": "Recommended",
-    "investments.explore_recommendations": "Explore Investment Recommendations",
-
-    // Correcciones para las traducciones incorrectas
-    "dashboard.monthly_expenses": "Monthly Expenses",
-    "budget.savings_rate": "Savings Rate",
-    "dashboard.performance": "Performance",
-    "dashboard.allocation": "Asset Allocation",
-
     // Y sus equivalentes en español
     "dashboard.monthly_expenses": "Gastos Mensuales",
     "budget.savings_rate": "Tasa de Ahorro",
     "dashboard.performance": "Rendimiento",
     "dashboard.allocation": "Distribución de Activos",
+
+    // AI insufficient data messages
+    "ai.insufficient_data_title": "Not Enough Data",
+    "ai.insufficient_data_description": "We need at least 10 transactions to provide accurate AI insights. Please add more transactions to unlock this feature.",
   },
   es: {
     // General
@@ -877,7 +850,7 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "dashboard.monthly_overview": "Resumen Mensual",
     "dashboard.recent_transactions": "Transacciones Recientes",
     "dashboard.latest_activities": "Tus últimas actividades financieras",
-    "dashboard.no_transactions": "No hay transacciones aún.",
+    "dashboard.no_transactions": "Aún no hay transacciones.",
     "dashboard.view_all": "Ver todas las transacciones",
     "dashboard.this_month": "Este mes",
     "dashboard.monthly_average": "Promedio mensual",
@@ -1129,7 +1102,7 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "tips.automation_explanation":
       "Automatizar tus ahorros te ayudará a alcanzar tus metas financieras más rápido. Configura transferencias automáticas a tus cuentas de ahorro para construir disciplina financiera.",
     "tips.debt_explanation":
-      "Tu tarjeta de crédito tiene un interés del 18%. Prioriza pagar esta deuda antes que otras con menor interés para ahorrar dinero a largo plazo y mejorar tu salud financiera. Cada peso que pagas en intereses es un peso menos para tus metas financieras.",
+      "Tu tarjeta de crédito tiene un interés del 18%. Prioriza pagar esta deuda antes que otras con menor interés para ahorrar dinero a largo plazo y mejorar tu salud financiera. Cada peso que pagas en intereses es uno menos para tus metas financieras.",
 
     // Financial Tips
     "tips.financial_tips": "Consejos Financieros",
@@ -1150,8 +1123,7 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
       "Configura transferencias automáticas a tu cuenta de ahorros en el día de pago para hacer que ahorrar sea más fácil.",
     "tips.set_up_auto": "Configurar transferencias automáticas",
     "tips.reduce_debt": "Reduce la Deuda de Alto Interés",
-    "tips.reduce_debt_desc":
-      "Concéntrate en pagar primero las deudas con alto interés para ahorrar dinero en pagos de intereses.",
+    "tips.reduce_debt_desc": "Concéntrate en pagar primero las deudas con alto interés para ahorrar dinero en pagos de intereses.",
     "tips.debt_strategy": "Crear una estrategia de pago de deudas",
 
     // Settings
@@ -1439,7 +1411,7 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "automation.setup_autosave": "Configurar Ahorros Automáticos",
     "automation.tips_title": "Consejos para una Automatización Exitosa",
     "automation.tips_description": "Aprovecha al máximo tu plan de ahorros automatizado",
-    "automation.tip_1_title": "Comienza Poco a Poco y Aumenta Gradualmente",
+    "automation.tip_1_title": "Comienza Pequeño y Aumenta Gradualmente",
     "automation.tip_1_description":
       "Comienza con una cantidad cómoda y auméntala gradualmente a medida que crezcan tus ingresos",
     "automation.tip_2_title": "Programa las Transferencias con el Día de Pago",
@@ -1485,16 +1457,15 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "investments.risk.high": "Riesgo Alto",
     "investments.risk.very_high": "Riesgo Muy Alto",
     "investments.ytd_return": "Retorno YTD",
-    "investments.one_year_return": "Retorno de 1 Año",
-    "investments.three_year_return": "Retorno de 3 Años",
-    "investments.five_year_return": "Retorno de 5 Años",
+    "investments.one_year_return": "1 Year Return",
+    "investments.three_year_return": "3 Year Return",
+    "investments.five_year_return": "5 Year Return",
     "investments.opportunities": "Oportunidades de Inversión",
     "investments.personalized_recommendations": "Recomendaciones personalizadas basadas en tu perfil",
     "investments.index_fund_recommendation": "Fondo de Índice S&P 500",
     "investments.index_fund_description": "Fondo de bajo costo que rastrea el rendimiento del índice S&P 500",
     "investments.dividend_stocks": "Acciones de Dividendos",
-    "investments.dividend_description":
-      "Empresas que distribuyen regularmente una parte de las ganancias a los accionistas",
+    "investments.dividend_description": "Empresas que distribuyen regularmente una parte de las ganancias a los accionistas",
     "investments.expected_return": "Retorno Esperado",
     "investments.recommended_allocation": "Recomendado",
     "investments.explore_recommendations": "Explorar Recomendaciones de Inversión",
@@ -1504,6 +1475,16 @@ const translationData: Record<LanguageCode, Record<string, string>> = {
     "budget.savings_rate": "Tasa de Ahorro",
     "dashboard.performance": "Rendimiento",
     "dashboard.allocation": "Distribución de Activos",
+
+    // Y sus equivalentes en español
+    "dashboard.monthly_expenses": "Gastos Mensuales",
+    "budget.savings_rate": "Tasa de Ahorro",
+    "dashboard.performance": "Rendimiento",
+    "dashboard.allocation": "Distribución de Activos",
+
+    // AI insufficient data messages
+    "ai.insufficient_data_title": "Datos Insuficientes",
+    "ai.insufficient_data_description": "Necesitamos al menos 10 transacciones para proporcionar análisis de IA precisos. Por favor, añade más transacciones para desbloquear esta función.",
   },
 }
 
@@ -1582,7 +1563,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Traducir texto
   const translate = (key: string) => {
-    return translations[key] || key
+    // For category keys, return just the value without the prefix
+    if (key.startsWith("category.")) {
+      return translations[key] || key.replace("category.", "");
+    }
+    
+    return translations[key] || key;
   }
 
   const value = {

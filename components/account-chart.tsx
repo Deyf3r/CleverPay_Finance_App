@@ -24,7 +24,7 @@ interface AccountChartProps {
 }
 
 export function AccountChart({ accountType }: AccountChartProps) {
-  const { state } = useFinance()
+  const { state, isLoading } = useFinance()
   const { translate, formatCurrency } = useSettings()
   const { theme } = useTheme()
   const isDark = theme === "dark"
@@ -54,7 +54,7 @@ export function AccountChart({ accountType }: AccountChartProps) {
 
   // Restar el efecto de todas las transacciones en los últimos 6 meses
   accountTransactions.forEach((transaction) => {
-    const transactionDate = parseISO(transaction.date)
+    const transactionDate = typeof transaction.date === 'string' ? parseISO(transaction.date) : new Date(transaction.date)
     if (transactionDate >= sixMonthsAgo) {
       if (transaction.type === "income") {
         initialBalance -= transaction.amount
@@ -91,7 +91,7 @@ export function AccountChart({ accountType }: AccountChartProps) {
 
     // Filtrar transacciones para este mes
     const monthTransactions = accountTransactions.filter((t) => {
-      const date = parseISO(t.date)
+      const date = typeof t.date === 'string' ? parseISO(t.date) : new Date(t.date)
       return date >= monthStart && date < monthEnd
     })
 
@@ -152,6 +152,15 @@ export function AccountChart({ accountType }: AccountChartProps) {
       )
     }
     return null
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-[300px] w-full bg-muted/20 flex flex-col items-center justify-center rounded-md">
+        <BarChart3Icon className="h-16 w-16 text-muted mb-2" />
+        <span className="text-muted-foreground">Cargando...</span>
+      </div>
+    )
   }
 
   if (accountTransactions.length === 0) {
