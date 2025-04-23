@@ -1,190 +1,398 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useReducer } from "react"
-import { v4 as uuidv4 } from "uuid"
-import type { FinanceState, FinanceContextType, Transaction, TransactionType } from "@/types/finance"
+import { createContext, useContext, useEffect, useState } from "react"
+import type { FinanceState, FinanceContextType, Transaction, TransactionType, AccountType } from "@/types/finance"
 import { format, parseISO } from "date-fns"
-
-// Initial state
-const initialState: FinanceState = {
-  transactions: [],
-  accounts: {
-    checking: { balance: 3000, name: "Checking Account" },
-    savings: { balance: 10000, name: "Savings Account" },
-    credit: { balance: -500, name: "Credit Card" },
-    cash: { balance: 200, name: "Cash" },
-  },
-}
-
-// Action types
-type Action =
-  | { type: "ADD_TRANSACTION"; payload: Omit<Transaction, "id"> }
-  | { type: "EDIT_TRANSACTION"; payload: { id: string; transaction: Omit<Transaction, "id"> } }
-  | { type: "DELETE_TRANSACTION"; payload: string }
-  | { type: "SET_STATE"; payload: FinanceState }
-
-// Reducer
-function financeReducer(state: FinanceState, action: Action): FinanceState {
-  switch (action.type) {
-    case "ADD_TRANSACTION":
-      return {
-        ...state,
-        transactions: [{ ...action.payload, id: uuidv4() }, ...state.transactions],
-      }
-    case "EDIT_TRANSACTION":
-      return {
-        ...state,
-        transactions: state.transactions.map((transaction) =>
-          transaction.id === action.payload.id ? { ...action.payload.transaction, id: transaction.id } : transaction,
-        ),
-      }
-    case "DELETE_TRANSACTION":
-      return {
-        ...state,
-        transactions: state.transactions.filter((transaction) => transaction.id !== action.payload),
-      }
-    case "SET_STATE":
-      return action.payload
-    default:
-      return state
-  }
-}
+import { toast } from "sonner"
 
 // Create context
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined)
 
-// Sample data for initial load
-const sampleTransactions: Omit<Transaction, "id">[] = [
-  {
-    type: "income",
-    amount: 3500,
-    description: "Salary Deposit",
-    category: "salary",
-    date: new Date(2023, 2, 1).toISOString(), // March 1, 2023
-    account: "checking",
-  },
-  {
-    type: "expense",
-    amount: 1200,
-    description: "Rent Payment",
-    category: "housing",
-    date: new Date(2023, 2, 1).toISOString(), // March 1, 2023
-    account: "checking",
-  },
-  {
-    type: "expense",
-    amount: 85.32,
-    description: "Grocery Shopping",
-    category: "food",
-    date: new Date(2023, 1, 27).toISOString(), // February 27, 2023
-    account: "credit",
-  },
-  {
-    type: "income",
-    amount: 750,
-    description: "Freelance Payment",
-    category: "other",
-    date: new Date(2023, 1, 26).toISOString(), // February 26, 2023
-    account: "checking",
-  },
-  {
-    type: "expense",
-    amount: 64.5,
-    description: "Restaurant Dinner",
-    category: "food",
-    date: new Date(2023, 1, 25).toISOString(), // February 25, 2023
-    account: "credit",
-  },
-  {
-    type: "expense",
-    amount: 59.99,
-    description: "Internet Bill",
-    category: "utilities",
-    date: new Date(2023, 1, 24).toISOString(), // February 24, 2023
-    account: "checking",
-  },
-  {
-    type: "expense",
-    amount: 45,
-    description: "Mobile Phone Bill",
-    category: "utilities",
-    date: new Date(2023, 1, 23).toISOString(), // February 23, 2023
-    account: "checking",
-  },
-  {
-    type: "expense",
-    amount: 4.5,
-    description: "Coffee Shop",
-    category: "food",
-    date: new Date(2023, 1, 22).toISOString(), // February 22, 2023
-    account: "cash",
-  },
-  {
-    type: "expense",
-    amount: 35,
-    description: "Gym Membership",
-    category: "health",
-    date: new Date(2023, 1, 21).toISOString(), // February 21, 2023
-    account: "checking",
-  },
-  {
-    type: "income",
-    amount: 120,
-    description: "Dividend Payment",
-    category: "investment",
-    date: new Date(2023, 1, 20).toISOString(), // February 20, 2023
-    account: "savings",
-  },
-]
-
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(financeReducer, initialState)
+  const [state, setState] = useState<FinanceState>({
+    transactions: [],
+    accounts: {
+      checking: { balance: 0, name: "Checking Account" },
+      savings: { balance: 0, name: "Savings Account" },
+      credit: { balance: 0, name: "Credit Card" },
+      cash: { balance: 0, name: "Cash" },
+    },
+  })
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Load state from localStorage on initial render
+  // Cargar datos al iniciar
   useEffect(() => {
-    const savedState = localStorage.getItem("financeState")
-
-    if (savedState) {
-      dispatch({ type: "SET_STATE", payload: JSON.parse(savedState) })
-    } else {
-      // Load sample data if no saved state
-      sampleTransactions.forEach((transaction) => {
-        dispatch({ type: "ADD_TRANSACTION", payload: transaction })
-      })
+    // Cargar transacciones de la API
+    const fetchTransactions = async () => {
+      try {
+        setIsLoading(true)
+        const response = await fetch("/api/transactions")
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(errorText || "Error al cargar las transacciones")
+        }
+        const data = await response.json()
+        
+        // Calcular saldos de cuentas basados en las transacciones
+        const accountBalances = {
+          checking: { balance: 0, name: "Checking Account" },
+          savings: { balance: 0, name: "Savings Account" },
+          credit: { balance: 0, name: "Credit Card" },
+          cash: { balance: 0, name: "Cash" },
+        };
+        
+        // Actualizar saldos basados en transacciones
+        data.forEach((transaction: Transaction) => {
+          const accountType = transaction.account as AccountType;
+          if (accountBalances[accountType]) {
+            if (transaction.type === "income") {
+              accountBalances[accountType].balance += transaction.amount;
+            } else if (transaction.type === "expense") {
+              accountBalances[accountType].balance -= transaction.amount;
+            }
+          }
+        });
+        
+        setState(prev => ({
+          ...prev,
+          transactions: data,
+          accounts: accountBalances
+        }))
+      } catch (error) {
+        console.error("Error loading transactions:", error)
+        toast.error("Error al cargar las transacciones")
+      } finally {
+        setIsLoading(false)
+      }
     }
+
+    fetchTransactions()
   }, [])
 
-  // Save state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem("financeState", JSON.stringify(state))
-  }, [state])
-
   // Add a new transaction
-  const addTransaction = (transaction: Omit<Transaction, "id">) => {
-    dispatch({ type: "ADD_TRANSACTION", payload: transaction })
+  const addTransaction = async (transaction: Omit<Transaction, "id" | "userId" | "createdAt" | "updatedAt" | "tags">) => {
+    try {
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(transaction),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al guardar la transacción")
+      }
+
+      const newTransaction = await response.json()
+      
+      // Actualizar el saldo de la cuenta
+      setState(prev => {
+        // Crear una copia del estado actual
+        const updatedAccounts = { ...prev.accounts };
+        const accountType = transaction.account as AccountType;
+        
+        // Actualizar el saldo según el tipo de transacción
+        if (transaction.type === "income") {
+          updatedAccounts[accountType].balance += transaction.amount;
+        } else if (transaction.type === "expense") {
+          updatedAccounts[accountType].balance -= transaction.amount;
+        }
+        
+        return {
+          ...prev,
+          transactions: [newTransaction, ...prev.transactions],
+          accounts: updatedAccounts
+        }
+      })
+
+      return newTransaction
+    } catch (error) {
+      console.error("Error saving transaction:", error)
+      toast.error("Error al guardar la transacción")
+      throw error
+    }
   }
 
   // Edit an existing transaction
-  const editTransaction = (id: string, transaction: Omit<Transaction, "id">) => {
-    dispatch({ type: "EDIT_TRANSACTION", payload: { id, transaction } })
+  const editTransaction = async (id: string, transaction: Omit<Transaction, "id" | "userId" | "createdAt" | "updatedAt" | "tags">) => {
+    try {
+      const response = await fetch(`/api/transactions/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(transaction),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al editar la transacción")
+      }
+
+      const updatedTransaction: Transaction = await response.json()
+      
+      setState(prev => {
+        // Encontrar la transacción original
+        const originalTransaction = prev.transactions.find(t => t.id === id);
+        if (!originalTransaction) {
+          return {
+            ...prev,
+            transactions: prev.transactions.map(t => t.id === id ? updatedTransaction : t)
+          };
+        }
+        
+        // Crear una copia del estado actual
+        const updatedAccounts = { ...prev.accounts };
+        
+        // Si la cuenta ha cambiado, actualizar ambas cuentas
+        if (originalTransaction.account !== transaction.account) {
+          // Revertir el efecto de la transacción original
+          if (originalTransaction.type === "income") {
+            updatedAccounts[originalTransaction.account as AccountType].balance -= originalTransaction.amount;
+          } else if (originalTransaction.type === "expense") {
+            updatedAccounts[originalTransaction.account as AccountType].balance += originalTransaction.amount;
+          }
+          
+          // Aplicar el efecto de la nueva transacción
+          if (transaction.type === "income") {
+            updatedAccounts[transaction.account as AccountType].balance += transaction.amount;
+          } else if (transaction.type === "expense") {
+            updatedAccounts[transaction.account as AccountType].balance -= transaction.amount;
+          }
+        } 
+        // Si la cuenta es la misma pero el monto o tipo ha cambiado
+        else if (originalTransaction.amount !== transaction.amount || originalTransaction.type !== transaction.type) {
+          // Revertir el efecto de la transacción original
+          if (originalTransaction.type === "income") {
+            updatedAccounts[originalTransaction.account as AccountType].balance -= originalTransaction.amount;
+          } else if (originalTransaction.type === "expense") {
+            updatedAccounts[originalTransaction.account as AccountType].balance += originalTransaction.amount;
+          }
+          
+          // Aplicar el efecto de la nueva transacción
+          if (transaction.type === "income") {
+            updatedAccounts[transaction.account as AccountType].balance += transaction.amount;
+          } else if (transaction.type === "expense") {
+            updatedAccounts[transaction.account as AccountType].balance -= transaction.amount;
+          }
+        }
+        
+        return {
+          ...prev,
+          transactions: prev.transactions.map(t => t.id === id ? updatedTransaction : t),
+          accounts: updatedAccounts
+        };
+      });
+
+      return updatedTransaction
+    } catch (error) {
+      console.error("Error editing transaction:", error)
+      toast.error("Error al editar la transacción")
+      throw error
+    }
   }
 
   // Delete a transaction
-  const deleteTransaction = (id: string) => {
-    dispatch({ type: "DELETE_TRANSACTION", payload: id })
+  const deleteTransaction = async (id: string) => {
+    try {
+      // Encontrar la transacción antes de eliminarla
+      const transactionToDelete = state.transactions.find(t => t.id === id);
+      if (!transactionToDelete) {
+        throw new Error("Transaction not found");
+      }
+      
+      const response = await fetch(`/api/transactions/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al eliminar la transacción")
+      }
+
+      setState(prev => {
+        // Crear una copia del estado actual
+        const updatedAccounts = { ...prev.accounts };
+        
+        // Revertir el efecto de la transacción en el saldo de la cuenta
+        if (transactionToDelete.type === "income") {
+          updatedAccounts[transactionToDelete.account as AccountType].balance -= transactionToDelete.amount;
+        } else if (transactionToDelete.type === "expense") {
+          updatedAccounts[transactionToDelete.account as AccountType].balance += transactionToDelete.amount;
+        }
+        
+        return {
+          ...prev,
+          transactions: prev.transactions.filter(t => t.id !== id),
+          accounts: updatedAccounts
+        };
+      });
+
+      return true
+    } catch (error) {
+      console.error("Error deleting transaction:", error)
+      toast.error("Error al eliminar la transacción")
+      throw error
+    }
   }
 
   // Get a transaction by ID
-  const getTransactionById = (id: string) => {
-    return state.transactions.find((transaction) => transaction.id === id)
+  const getTransactionById = async (id: string) => {
+    try {
+      const response = await fetch(`/api/transactions/${id}`)
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al cargar la transacción")
+      }
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error("Error loading transaction:", error)
+      toast.error("Error al cargar la transacción")
+      throw error
+    }
+  }
+
+  // Add a new account
+  const addAccount = async (accountData: { type: AccountType; name: string; initialBalance: number }) => {
+    // Add validation
+    if (!accountData.type) {
+      throw new Error("Account type is required")
+    }
+
+    if (!accountData.name.trim()) {
+      throw new Error("Account name is required")
+    }
+
+    if (isNaN(accountData.initialBalance)) {
+      throw new Error("Initial balance must be a valid number")
+    }
+
+    // Check if account type already exists
+    if (state.accounts[accountData.type]) {
+      throw new Error(`An account of type ${accountData.type} already exists`)
+    }
+
+    try {
+      const response = await fetch("/api/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(accountData),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al guardar la cuenta")
+      }
+
+      const newAccount = await response.json()
+      setState(prev => ({
+        ...prev,
+        accounts: { ...prev.accounts, [newAccount.type]: newAccount }
+      }))
+
+      return newAccount
+    } catch (error) {
+      console.error("Error saving account:", error)
+      toast.error("Error al guardar la cuenta")
+      throw error
+    }
+  }
+
+  // Rename an account
+  const renameAccount = async (accountType: AccountType, newName: string) => {
+    if (!newName.trim()) {
+      throw new Error("Account name is required")
+    }
+
+    try {
+      const response = await fetch(`/api/accounts/${accountType}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: newName }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al renombrar la cuenta")
+      }
+
+      const updatedAccount = await response.json()
+      setState(prev => ({
+        ...prev,
+        accounts: { ...prev.accounts, [updatedAccount.type]: updatedAccount }
+      }))
+
+      return true
+    } catch (error) {
+      console.error("Error renaming account:", error)
+      toast.error("Error al renombrar la cuenta")
+      throw error
+    }
+  }
+
+  // Transfer funds between accounts
+  const transferFunds = async (fromAccount: AccountType, toAccount: AccountType, amount: number) => {
+    if (fromAccount === toAccount) {
+      throw new Error("Cannot transfer to the same account")
+    }
+
+    if (amount <= 0) {
+      throw new Error("Transfer amount must be greater than zero")
+    }
+
+    if (!state.accounts[fromAccount]) {
+      throw new Error("Source account not found")
+    }
+
+    if (!state.accounts[toAccount]) {
+      throw new Error("Destination account not found")
+    }
+
+    if (state.accounts[fromAccount].balance < amount) {
+      throw new Error("Insufficient funds in source account")
+    }
+
+    try {
+      const response = await fetch("/api/transfers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fromAccount, toAccount, amount }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Error al transferir fondos")
+      }
+
+      const transferData = await response.json()
+      setState(prev => ({
+        ...prev,
+        transactions: [...prev.transactions, ...transferData.transactions],
+        accounts: { ...prev.accounts, [fromAccount]: transferData.fromAccount, [toAccount]: transferData.toAccount }
+      }))
+
+      return true
+    } catch (error) {
+      console.error("Error transferring funds:", error)
+      toast.error("Error al transferir fondos")
+      throw error
+    }
   }
 
   // Get filtered transactions by type and/or month
   const getFilteredTransactions = (type?: TransactionType, month?: string) => {
     return state.transactions.filter((transaction) => {
-      const transactionDate = parseISO(transaction.date)
-      const transactionMonth = format(transactionDate, "MMMM yyyy")
+      const transactionMonth = format(transaction.date, "MMMM yyyy")
 
       const typeMatch = type ? transaction.type === type : true
       const monthMatch = month ? transactionMonth === month : true
@@ -193,10 +401,34 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     })
   }
 
+  // Get monthly data for charts
+  const getMonthlyData = () => {
+    const monthlyData: { [key: string]: { income: number; expenses: number } } = {}
+
+    state.transactions.forEach((transaction) => {
+      const month = format(transaction.date, "MMM yyyy")
+
+      if (!monthlyData[month]) {
+        monthlyData[month] = { income: 0, expenses: 0 }
+      }
+
+      if (transaction.type === "income") {
+        monthlyData[month].income += transaction.amount
+      } else {
+        monthlyData[month].expenses += transaction.amount
+      }
+    })
+
+    return Object.entries(monthlyData).map(([month, data]) => ({
+      month,
+      income: Number.parseFloat(data.income.toFixed(2)),
+      expenses: Number.parseFloat(data.expenses.toFixed(2)),
+    }))
+  }
+
   // Calculate total balance across all accounts
   const getTotalBalance = () => {
     const accountsBalance = Object.values(state.accounts).reduce((total, account) => total + account.balance, 0)
-
     return Number.parseFloat(accountsBalance.toFixed(2))
   }
 
@@ -229,38 +461,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return Number.parseFloat(rate.toFixed(1))
   }
 
-  // Get monthly data for charts
-  const getMonthlyData = () => {
-    const monthlyData: { [key: string]: { income: number; expenses: number } } = {}
-
-    state.transactions.forEach((transaction) => {
-      const date = parseISO(transaction.date)
-      const month = format(date, "MMM yyyy")
-
-      if (!monthlyData[month]) {
-        monthlyData[month] = { income: 0, expenses: 0 }
-      }
-
-      if (transaction.type === "income") {
-        monthlyData[month].income += transaction.amount
-      } else {
-        monthlyData[month].expenses += transaction.amount
-      }
-    })
-
-    return Object.entries(monthlyData).map(([month, data]) => ({
-      month,
-      income: Number.parseFloat(data.income.toFixed(2)),
-      expenses: Number.parseFloat(data.expenses.toFixed(2)),
-    }))
-  }
-
   const value = {
     state,
+    isLoading,
     addTransaction,
     editTransaction,
     deleteTransaction,
     getTransactionById,
+    addAccount,
+    renameAccount,
+    transferFunds,
     getFilteredTransactions,
     getTotalBalance,
     getTotalIncome,
@@ -280,4 +490,3 @@ export const useFinance = () => {
   }
   return context
 }
-

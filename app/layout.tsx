@@ -1,15 +1,31 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Poppins } from "next/font/google"
 import "./globals.css"
 import { FinanceProvider } from "@/context/finance-context"
+import { SettingsProvider } from "@/context/settings-context"
+import { AuthProvider } from "@/context/auth-context"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 
-const inter = Inter({ subsets: ["latin"] })
+// Properly load Poppins with specific weights
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-poppins",
+})
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+})
 
 export const metadata: Metadata = {
-  title: "Finance Tracker",
-  description: "Track your income, expenses and financial goals",
+  title: "CleverPay - Tu dinero, más inteligente que nunca",
+  description:
+    "Gestiona tus finanzas de manera inteligente con CleverPay. Seguimiento de ingresos, gastos y metas financieras con IA predictiva.",
     generator: 'v0.dev'
 }
 
@@ -19,17 +35,25 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <FinanceProvider>
-          {children}
-          <Toaster />
-        </FinanceProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/dist/framer-motion.css" />
+      </head>
+      <body className={`${poppins.variable} ${inter.variable} font-sans`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <SettingsProvider>
+            <AuthProvider>
+              <FinanceProvider>
+                {children}
+                <Toaster />
+              </FinanceProvider>
+            </AuthProvider>
+          </SettingsProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
 }
-
 
 
 import './globals.css'

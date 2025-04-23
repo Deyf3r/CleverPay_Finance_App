@@ -1,4 +1,9 @@
 {
-  "/page": "app/page.js",
-  "/transactions/page": "app/transactions/page.js"
+  "/api/auth/session/route": "app/api/auth/session/route.js",
+  "/api/transactions/route": "app/api/transactions/route.js",
+  "/budget-planner/page": "app/budget-planner/page.js",
+  "/emergency-fund/page": "app/emergency-fund/page.js",
+  "/debt-planner/page": "app/debt-planner/page.js",
+  "/accounts/page": "app/accounts/page.js",
+  "/ai-insights/page": "app/ai-insights/page.js"
 }
