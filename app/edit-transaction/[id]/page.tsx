@@ -23,4 +23,3 @@ export default function EditTransactionPage({ params }: { params: { id: string }
     </div>
   )
 }
-
